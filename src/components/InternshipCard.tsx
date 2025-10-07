@@ -1,4 +1,5 @@
 import React from 'react';
+import { useNavigate } from 'react-router-dom';
 import { MapPinIcon, CalendarIcon, BuildingIcon } from 'lucide-react';
 export interface Internship {
   id: number;
@@ -15,12 +16,16 @@ export interface Internship {
 }
 interface InternshipCardProps {
   internship: Internship;
-  onApply?: (internship: Internship) => void;
 }
 const InternshipCard: React.FC<InternshipCardProps> = ({
-  internship,
-  onApply
+  internship
 }) => {
+  const navigate = useNavigate();
+  
+  const handleApply = () => {
+    // Navigate to application form instead of direct submission
+    navigate(`/apply/${internship.id}`);
+  };
   return <div className="bg-white rounded-lg shadow-md p-6 transition-all hover:shadow-lg hover:-translate-y-0.5 border border-gray-100">
       <div className="flex items-start">
         <div className="h-16 w-16 flex-shrink-0 mr-4">
@@ -56,7 +61,7 @@ const InternshipCard: React.FC<InternshipCardProps> = ({
         <div className="text-sm text-gray-500">
           Posted: {internship.postedDate}
         </div>
-        <button onClick={() => onApply && onApply(internship)} className="px-4 py-2 bg-emerald-600 text-white text-sm font-medium rounded-md hover:bg-emerald-700 focus:outline-none focus:ring-2 focus:ring-emerald-500 transition-colors">
+        <button onClick={handleApply} className="px-4 py-2 bg-emerald-600 text-white text-sm font-medium rounded-md hover:bg-emerald-700 focus:outline-none focus:ring-2 focus:ring-emerald-500 transition-colors">
           Apply Now
         </button>
       </div>

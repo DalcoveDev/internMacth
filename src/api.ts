@@ -26,6 +26,10 @@ export async function rejectInternship(id: number, reason = '') {
   return request(`/internships/${id}/reject`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ reason }) })
 }
 
+export async function deleteInternship(id: number) {
+  return request(`/internships/${id}`, { method: 'DELETE' })
+}
+
 export async function createUser(data: any) {
   return request('/users', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data) })
 }
@@ -42,6 +46,10 @@ export async function getApplication(id: number) {
   return request(`/applications/${id}`)
 }
 
+export async function updateApplicationStatus(id: number, status: 'pending'|'approved'|'rejected') {
+  return request(`/applications/${id}/status`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ status }) })
+}
+
 export async function signup(data: any) {
   return request('/auth/signup', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data) })
 }
@@ -52,4 +60,12 @@ export async function login(data: any) {
 
 export async function createApplication(data: any) {
   return request('/applications', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data) })
+}
+
+export async function updateUser(id: number, data: any) {
+  return request(`/users/${id}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data) })
+}
+
+export async function toggleUserStatus(id: number, status: 'active' | 'inactive') {
+  return request(`/users/${id}/status`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ status }) })
 }

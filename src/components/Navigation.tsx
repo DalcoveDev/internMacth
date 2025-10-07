@@ -1,25 +1,32 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Menu, X, User, LogOut, Briefcase, Shield } from 'lucide-react';
+import { useConfirm } from './ConfirmDialog';
+import { useAuth } from '../contexts/AuthContext';
 
 const Navigation = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
-  const [user, setUser] = useState(null);
   const navigate = useNavigate();
+  const { confirm } = useConfirm();
+  const { user, logout } = useAuth();
 
-  useEffect(() => {
-    // Check if user is logged in
-    const storedUser = localStorage.getItem('user');
-    if (storedUser) {
-      setUser(JSON.parse(storedUser));
+
+
+  const handleLogout = async () => {
+    const confirmed = await confirm({
+      title: 'Confirm Logout',
+      message: 'Are you sure you want to logout? You will need to sign in again to access your account.',
+      confirmText: 'Logout',
+      cancelText: 'Stay',
+      type: 'warning'
+    });
+    
+    if (confirmed) {
+      logout();
+      setIsUserMenuOpen(false);
+      navigate('/');
     }
-  }, []);
-
-  const handleLogout = () => {
-    localStorage.removeItem('user');
-    setUser(null);
-    navigate('/');
   };
 
   const getUserIcon = () => {
@@ -108,46 +115,58 @@ const Navigation = () => {
                   </Link>
                 </>
               ) : (
-                <div className="relative">
-                  <button
-                    onClick={() => setIsUserMenuOpen(!isUserMenuOpen)}
-                  className="flex items-center space-x-2 px-3 py-2 rounded-md text-sm font-medium text-gray-800 border border-gray-300 hover:border-emerald-300 transition-colors"
-                  >
-                    <div className="p-1 bg-white/20 rounded-lg">
-                      {getUserIcon()}
-                    </div>
-                    <span className="hidden sm:block">{(user as {name: string}).name}</span>
-                  <span className="hidden sm:block text-xs bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded-full font-semibold uppercase tracking-wide">
-                      {(user as {role: string}).role}
-                    </span>
-                  </button>
-
-                  {isUserMenuOpen && (
-                    <div className="absolute right-0 mt-2 w-60 rounded-lg shadow-lg bg-white ring-1 ring-gray-100 z-20">
-                      <div className="p-2">
-                        <Link
-                          to={getDashboardLink()}
-                          className="flex items-center space-x-2 w-full px-3 py-2 text-sm font-medium text-gray-800 hover:text-emerald-800 hover:bg-emerald-50 rounded-md transition-colors"
-                          onClick={() => setIsUserMenuOpen(false)}
-                        >
-                          <div className="p-1 bg-gray-100 rounded-md">
-                            {getUserIcon()}
-                          </div>
-                          <span>Dashboard</span>
-                        </Link>
-                        <button
-                          onClick={handleLogout}
-                          className="flex items-center space-x-2 w-full px-3 py-2 text-sm font-medium text-red-600 hover:text-red-700 hover:bg-red-50 rounded-md transition-colors mt-1"
-                        >
-                          <div className="p-1 bg-red-100 rounded-md">
-                            <LogOut size={16} />
-                          </div>
-                          <span>Logout</span>
-                        </button>
+                <>
+                  {/* User Profile Dropdown */}
+                  <div className="relative">
+                    <button
+                      onClick={() => setIsUserMenuOpen(!isUserMenuOpen)}
+                    className="flex items-center space-x-2 px-3 py-2 rounded-md text-sm font-medium text-gray-800 border border-gray-300 hover:border-emerald-300 transition-colors"
+                    >
+                      <div className="p-1 bg-white/20 rounded-lg">
+                        {getUserIcon()}
                       </div>
-                    </div>
-                  )}
-                </div>
+                      <span className="hidden sm:block">{(user as {name: string}).name}</span>
+                    <span className="hidden sm:block text-xs bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded-full font-semibold uppercase tracking-wide">
+                        {(user as {role: string}).role}
+                      </span>
+                    </button>
+
+                    {isUserMenuOpen && (
+                      <div className="absolute right-0 mt-2 w-60 rounded-lg shadow-lg bg-white ring-1 ring-gray-100 z-20">
+                        <div className="p-2">
+                          <Link
+                            to={getDashboardLink()}
+                            className="flex items-center space-x-2 w-full px-3 py-2 text-sm font-medium text-gray-800 hover:text-emerald-800 hover:bg-emerald-50 rounded-md transition-colors"
+                            onClick={() => setIsUserMenuOpen(false)}
+                          >
+                            <div className="p-1 bg-gray-100 rounded-md">
+                              {getUserIcon()}
+                            </div>
+                            <span>Dashboard</span>
+                          </Link>
+                          <button
+                            onClick={handleLogout}
+                            className="flex items-center space-x-2 w-full px-3 py-2 text-sm font-medium text-red-600 hover:text-red-700 hover:bg-red-50 rounded-md transition-colors mt-1"
+                          >
+                            <div className="p-1 bg-red-100 rounded-md">
+                              <LogOut size={16} />
+                            </div>
+                            <span>Logout</span>
+                          </button>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                  
+                  {/* Dedicated Logout Button */}
+                  <button
+                    onClick={handleLogout}
+                    className="flex items-center space-x-2 px-4 py-2 rounded-md text-sm font-medium text-red-600 border border-red-300 hover:bg-red-50 hover:border-red-400 transition-colors"
+                  >
+                    <LogOut size={16} />
+                    <span className="hidden sm:block">Logout</span>
+                  </button>
+                </>
               )}
             </div>
           </div>
@@ -155,36 +174,47 @@ const Navigation = () => {
           {/* Mobile Menu Button */}
           <div className="flex md:hidden items-center space-x-2">
             {user && (
-              <div className="relative">
-                <button
-                  onClick={() => setIsUserMenuOpen(!isUserMenuOpen)}
-                  className="p-2 rounded-md text-gray-700 hover:bg-gray-100 transition-colors"
-                >
-                  {getUserIcon()}
-                </button>
+              <>
+                {/* Mobile User Menu */}
+                <div className="relative">
+                  <button
+                    onClick={() => setIsUserMenuOpen(!isUserMenuOpen)}
+                    className="p-2 rounded-md text-gray-700 hover:bg-gray-100 transition-colors"
+                  >
+                    {getUserIcon()}
+                  </button>
 
-                {isUserMenuOpen && (
-                  <div className="absolute right-0 mt-2 w-48 rounded-lg shadow-lg bg-white ring-1 ring-gray-100 z-20">
-                    <div className="p-2">
-                      <Link
-                        to={getDashboardLink()}
-                        className="flex items-center space-x-2 w-full px-3 py-2 text-sm text-gray-700 hover:bg-emerald-50 rounded-md transition-colors"
-                        onClick={() => setIsUserMenuOpen(false)}
-                      >
-                        {getUserIcon()}
-                        <span>Dashboard</span>
-                      </Link>
-                      <button
-                        onClick={handleLogout}
-                        className="flex items-center space-x-2 w-full px-3 py-2 text-sm text-red-600 hover:bg-red-50 rounded-md transition-colors"
-                      >
-                        <LogOut size={16} />
-                        <span>Logout</span>
-                      </button>
+                  {isUserMenuOpen && (
+                    <div className="absolute right-0 mt-2 w-48 rounded-lg shadow-lg bg-white ring-1 ring-gray-100 z-20">
+                      <div className="p-2">
+                        <Link
+                          to={getDashboardLink()}
+                          className="flex items-center space-x-2 w-full px-3 py-2 text-sm text-gray-700 hover:bg-emerald-50 rounded-md transition-colors"
+                          onClick={() => setIsUserMenuOpen(false)}
+                        >
+                          {getUserIcon()}
+                          <span>Dashboard</span>
+                        </Link>
+                        <button
+                          onClick={handleLogout}
+                          className="flex items-center space-x-2 w-full px-3 py-2 text-sm text-red-600 hover:bg-red-50 rounded-md transition-colors"
+                        >
+                          <LogOut size={16} />
+                          <span>Logout</span>
+                        </button>
+                      </div>
                     </div>
-                  </div>
-                )}
-              </div>
+                  )}
+                </div>
+                
+                {/* Mobile Logout Button */}
+                <button
+                  onClick={handleLogout}
+                  className="p-2 rounded-md text-red-600 hover:bg-red-50 border border-red-300 transition-colors"
+                >
+                  <LogOut size={20} />
+                </button>
+              </>
             )}
 
             <button
@@ -242,6 +272,34 @@ const Navigation = () => {
                 >
                   Sign Up
                 </Link>
+              </div>
+            )}
+            
+            {user && (
+              <div className="pt-4 space-y-2 border-t border-gray-200/50">
+                <div className="px-3 py-2 text-sm text-gray-500">
+                  Signed in as <span className="font-medium text-gray-700">{(user as {name: string}).name}</span>
+                  <span className="ml-2 text-xs bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded-full font-semibold uppercase tracking-wide">
+                    {(user as {role: string}).role}
+                  </span>
+                </div>
+                <Link
+                  to={getDashboardLink()}
+                  className="block px-3 py-2 rounded-md text-base font-medium text-gray-700 hover:text-emerald-700 hover:bg-emerald-50 transition-colors"
+                  onClick={() => setIsMenuOpen(false)}
+                >
+                  Dashboard
+                </Link>
+                <button
+                  onClick={() => {
+                    handleLogout();
+                    setIsMenuOpen(false);
+                  }}
+                  className="flex items-center space-x-2 w-full px-3 py-2 rounded-md text-base font-medium text-red-600 hover:bg-red-50 transition-colors"
+                >
+                  <LogOut size={18} />
+                  <span>Logout</span>
+                </button>
               </div>
             )}
           </div>

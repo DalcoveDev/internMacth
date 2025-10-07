@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import SearchBar from '../components/SearchBar';
 import InternshipCard from '../components/InternshipCard';
-import { createApplication, listInternships } from '../api';
+import { listInternships } from '../api';
 ;
 interface Internship {
   id: number;
@@ -62,24 +62,6 @@ const Search = () => {
   useEffect(() => {
     handleSearch('', '');
   }, [filters]);
-
-  const handleApply = (internship: Internship) => {
-    const stored = localStorage.getItem('user');
-    const user = stored ? JSON.parse(stored) : null;
-    const studentName = user?.name || 'Anonymous';
-    const studentEmail = user?.email || 'anonymous@example.com';
-    createApplication({
-      internshipId: internship.id,
-      studentName,
-      studentEmail,
-      coverLetter: '',
-      skills: (internship.requirements || []).join(', ')
-    }).then(() => {
-      alert('Application submitted successfully');
-    }).catch(() => {
-      alert('Failed to submit application');
-    });
-  };
 
   // Load from API on mount
   useEffect(() => {
@@ -213,7 +195,7 @@ const Search = () => {
           </div>
           {internships.length > 0 ? <div className="space-y-6">
               {internships.map(internship => (
-                <InternshipCard key={internship.id} internship={internship} onApply={handleApply} />
+                <InternshipCard key={internship.id} internship={internship} />
               ))}
             </div> : <div className="bg-white p-8 rounded-lg shadow-md text-center">
               <div className="inline-flex items-center justify-center h-16 w-16 rounded-full bg-gray-100 text-gray-500 mb-4">

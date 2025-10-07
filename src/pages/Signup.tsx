@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { createUser } from '../api';
+import { useAuth } from '../contexts/AuthContext';
 import { UserIcon, BriefcaseIcon, ShieldIcon, EyeIcon, EyeOffIcon } from 'lucide-react';
 const Signup = () => {
   const [name, setName] = useState('');
@@ -9,31 +9,82 @@ const Signup = () => {
   const [confirmPassword, setConfirmPassword] = useState('');
   const [role, setRole] = useState('student');
   const [showPassword, setShowPassword] = useState(false);
-  const [error, setError] = useState('');
+  const [localError, setLocalError] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
   const navigate = useNavigate();
-  const handleSignup = (e: React.FormEvent) => {
+  const { user, signup, error, clearError } = useAuth();
+  
+  // Check if user is already logged in
+  useEffect(() => {
+    if (user) {
+      // Redirect to appropriate dashboard
+      if (user.role === 'student') navigate('/student-dashboard');
+      else if (user.role === 'company') navigate('/company-dashboard');
+      else if (user.role === 'admin') navigate('/admin-dashboard');
+      else navigate('/');
+    }
+  }, [user, navigate]);
+  const handleSignup = async (e: React.FormEvent) => {
     e.preventDefault();
-    // Basic validation
-    if (!name || !email || !password) {
-      setError('Please fill all required fields');
+    clearError(); // Clear previous errors
+    setLocalError(''); // Clear local errors
+    setIsLoading(true);
+    
+    // Enhanced validation
+    if (!name?.trim() || !email?.trim() || !password) {
+      setLocalError('Please fill all required fields');
+      setIsLoading(false);
       return;
     }
+    
+    if (name.trim().length < 2) {
+      setLocalError('Name must be at least 2 characters long');
+      setIsLoading(false);
+      return;
+    }
+    
+    if (!email.includes('@') || !email.includes('.')) {
+      setLocalError('Please enter a valid email address');
+      setIsLoading(false);
+      return;
+    }
+    
+    if (password.length < 8) {
+      setLocalError('Password must be at least 8 characters long');
+      setIsLoading(false);
+      return;
+    }
+    
     if (password !== confirmPassword) {
-      setError('Passwords do not match');
+      setLocalError('Passwords do not match');
+      setIsLoading(false);
       return;
     }
-    // Create user via API only
-    createUser({ name, email, password, role }).then((created: any) => {
-      const user = { id: created.id, name: created.name, email: created.email, role: created.role };
-      localStorage.setItem('user', JSON.stringify(user));
+    
+    // Check password strength
+    const hasNumber = /\d/.test(password);
+    const hasLetter = /[a-zA-Z]/.test(password);
+    if (!hasNumber || !hasLetter) {
+      setLocalError('Password must contain both letters and numbers');
+      setIsLoading(false);
+      return;
+    }
+    
+    try {
+      await signup({ name: name.trim(), email: email.trim().toLowerCase(), password, role });
+      
+      // Navigate based on role after successful signup
       if (role === 'student') navigate('/student-dashboard');
       else if (role === 'company') navigate('/company-dashboard');
       else if (role === 'admin') navigate('/admin-dashboard');
       else navigate('/');
-    }).catch((err) => {
-      setError('Signup failed. Please try again.');
-      console.error(err)
-    })
+      
+    } catch (error) {
+      // Error is handled by AuthContext
+      console.error('Signup failed:', error);
+    } finally {
+      setIsLoading(false);
+    }
   };
   const [mounted, setMounted] = useState(false);
   const roleImageMap: Record<string, string> = {
@@ -57,10 +108,10 @@ const Signup = () => {
             Selected role: {role}
           </span>
         </div>
-        {error && <div className="bg-red-50 border-l-4 border-red-500 p-4 mb-6">
+        {(error || localError) && <div className="bg-red-50 border-l-4 border-red-500 p-4 mb-6">
             <div className="flex">
               <div>
-                <p className="text-sm text-red-700">{error}</p>
+                <p className="text-sm text-red-700">{error || localError}</p>
               </div>
             </div>
           </div>}
@@ -112,6 +163,31 @@ const Signup = () => {
                 {showPassword ? <EyeOffIcon className="h-5 w-5 text-gray-500" /> : <EyeIcon className="h-5 w-5 text-gray-500" />}
               </button>
             </div>
+            {/* Password Strength Indicator */}
+            {password && (
+              <div className="mt-2 space-y-1">
+                <div className="flex space-x-1">
+                  <div className={`h-1 w-1/4 rounded ${
+                    password.length >= 8 ? 'bg-green-500' : 'bg-gray-300'
+                  }`}></div>
+                  <div className={`h-1 w-1/4 rounded ${
+                    /[a-zA-Z]/.test(password) && /\d/.test(password) ? 'bg-green-500' : 'bg-gray-300'
+                  }`}></div>
+                  <div className={`h-1 w-1/4 rounded ${
+                    /[A-Z]/.test(password) ? 'bg-green-500' : 'bg-gray-300'
+                  }`}></div>
+                  <div className={`h-1 w-1/4 rounded ${
+                    /[!@#$%^&*(),.?":{}|<>]/.test(password) ? 'bg-green-500' : 'bg-gray-300'
+                  }`}></div>
+                </div>
+                <p className="text-xs text-gray-600">
+                  Password strength: {password.length >= 8 && /[a-zA-Z]/.test(password) && /\d/.test(password) ? 
+                    (/[A-Z]/.test(password) && /[!@#$%^&*(),.?":{}|<>]/.test(password) ? 'Strong' : 'Good') : 
+                    'Weak'
+                  }
+                </p>
+              </div>
+            )}
           </div>
           <div className="mb-6">
             <label htmlFor="confirmPassword" className="block text-gray-700 text-sm font-medium mb-2">
@@ -134,8 +210,23 @@ const Signup = () => {
               </label>
             </div>
           </div>
-          <button type="submit" className="w-full py-3 px-4 bg-emerald-600 hover:bg-emerald-700 text-white font-medium rounded-md focus:outline-none focus:ring-2 focus:ring-emerald-500 transition-transform duration-200 will-change-transform hover:-translate-y-0.5">
-            Create Account
+          <button 
+            type="submit" 
+            disabled={isLoading}
+            className={`w-full py-3 px-4 font-medium rounded-md focus:outline-none focus:ring-2 focus:ring-emerald-500 transition-all duration-200 ${
+              isLoading 
+                ? 'bg-gray-400 cursor-not-allowed' 
+                : 'bg-emerald-600 hover:bg-emerald-700 text-white hover:-translate-y-0.5'
+            }`}
+          >
+            {isLoading ? (
+              <div className="flex items-center justify-center">
+                <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin mr-2"></div>
+                Creating Account...
+              </div>
+            ) : (
+              'Create Account'
+            )}
           </button>
         </form>
         <div className="mt-6 text-center">

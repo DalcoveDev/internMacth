@@ -23,7 +23,7 @@ app.use('/api/applications', applicationsRouter)
 
 const port = process.env.PORT ?? 4000
 app.listen(port, () => {
-	console.log(`Server listening on ${port}`)
+	console.log(`Server listening on ${port} - SQLite Database Ready`)
 })
 
 process.on('SIGINT', async () => {

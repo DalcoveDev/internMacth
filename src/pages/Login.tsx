@@ -1,32 +1,59 @@
 import React, { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { UserIcon, BriefcaseIcon, ShieldIcon, EyeIcon, EyeOffIcon } from 'lucide-react';
-import { login } from '../api';
+import { useAuth } from '../contexts/AuthContext';
 const Login = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [role, setRole] = useState('student');
   const [showPassword, setShowPassword] = useState(false);
-  const [error, setError] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
   const navigate = useNavigate();
-  const handleLogin = (e: React.FormEvent) => {
-    e.preventDefault();
-    // Basic validation
-    if (!email || !password) {
-      setError('Please enter both email and password');
-      return;
-    }
-    // Call backend login
-    login({ email, password }).then((resp: any) => {
-      const user = resp.user || { id: 0, name: email.split('@')[0], email, role };
-      localStorage.setItem('user', JSON.stringify(user));
+  const { user, login, error, clearError } = useAuth();
+  
+  // Check if user is already logged in
+  useEffect(() => {
+    if (user) {
+      // Redirect to appropriate dashboard
       if (user.role === 'student') navigate('/student-dashboard');
       else if (user.role === 'company') navigate('/company-dashboard');
       else if (user.role === 'admin') navigate('/admin-dashboard');
       else navigate('/');
-    }).catch(() => {
-      setError('Invalid credentials');
-    })
+    }
+  }, [user, navigate]);
+  const handleLogin = async (e: React.FormEvent) => {
+    e.preventDefault();
+    clearError(); // Clear previous errors
+    setIsLoading(true);
+    
+    // Basic validation
+    if (!email || !password) {
+      return;
+    }
+    
+    if (!email.includes('@')) {
+      return;
+    }
+    
+    if (password.length < 6) {
+      return;
+    }
+    
+    try {
+      await login({ email, password, role });
+      
+      // Navigate based on user role after successful login
+      if (role === 'student') navigate('/student-dashboard');
+      else if (role === 'company') navigate('/company-dashboard');
+      else if (role === 'admin') navigate('/admin-dashboard');
+      else navigate('/');
+      
+    } catch (error) {
+      // Error is handled by AuthContext
+      console.error('Login failed:', error);
+    } finally {
+      setIsLoading(false);
+    }
   };
   const [mounted, setMounted] = useState(false);
   const roleImageMap: Record<string, string> = {
@@ -44,6 +71,17 @@ const Login = () => {
         <div className="text-center mb-8">
           <h2 className="text-3xl font-bold text-gray-900">Welcome Back</h2>
           <p className="mt-2 text-gray-600">Sign in to your account</p>
+        </div>
+        
+        {/* Demo Credentials Banner */}
+        <div className="mb-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+          <h4 className="font-semibold text-blue-900 mb-2">🎯 Demo Credentials</h4>
+          <div className="text-sm text-blue-800 space-y-1">
+            <p><strong>Student:</strong> student@demo.com / password123</p>
+            <p><strong>Company:</strong> company@demo.com / password123</p>
+            <p><strong>Admin:</strong> admin@demo.com / password123</p>
+            <p className="text-xs text-blue-600 mt-2">Or create a new account with any email</p>
+          </div>
         </div>
         <div className="mb-6">
           <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-emerald-50 text-emerald-700 border border-emerald-200">
@@ -113,8 +151,23 @@ const Login = () => {
               </a>
             </div>
           </div>
-          <button type="submit" className="w-full py-3 px-4 bg-emerald-600 hover:bg-emerald-700 text-white font-medium rounded-md focus:outline-none focus:ring-2 focus:ring-emerald-500 transition-transform duration-200 will-change-transform hover:-translate-y-0.5">
-            Sign In
+          <button 
+            type="submit" 
+            disabled={isLoading}
+            className={`w-full py-3 px-4 font-medium rounded-md focus:outline-none focus:ring-2 focus:ring-emerald-500 transition-all duration-200 ${
+              isLoading 
+                ? 'bg-gray-400 cursor-not-allowed' 
+                : 'bg-emerald-600 hover:bg-emerald-700 text-white hover:-translate-y-0.5'
+            }`}
+          >
+            {isLoading ? (
+              <div className="flex items-center justify-center">
+                <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin mr-2"></div>
+                Signing In...
+              </div>
+            ) : (
+              'Sign In'
+            )}
           </button>
         </form>
         <div className="mt-6 text-center">

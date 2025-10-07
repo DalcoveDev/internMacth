@@ -2,7 +2,9 @@ import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { ArrowLeftIcon, MapPinIcon, CalendarIcon, ClockIcon, CheckIcon, XIcon } from 'lucide-react';
 import { getInternship, approveInternship, rejectInternship } from '../api';
+import { useToast } from '../components/ToastProvider';
 const InternshipApproval = () => {
+  const { showWarning } = useToast();
   const {
     id
   } = useParams();
@@ -32,7 +34,7 @@ const InternshipApproval = () => {
   };
   const handleReject = () => {
     if (!rejectionReason) {
-      alert('Please provide a reason for rejection');
+      showWarning('Reason Required', 'Please provide a reason for rejection');
       return;
     }
     rejectInternship(Number(id), rejectionReason).then(() => {

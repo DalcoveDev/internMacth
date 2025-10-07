@@ -41,6 +41,7 @@ const featuredInternships = [{
   logoUrl: 'https://images.unsplash.com/photo-1542744173-8e7e53415bb0?ixlib=rb-1.2.1&auto=format&fit=crop&w=1000&q=80'
 }];
 const Home = () => {
+  // Removed handleApply function as we now navigate to dedicated application form
   return <div>
       <Hero />
       {/* How It Works Section */}
