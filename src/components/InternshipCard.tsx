@@ -15,11 +15,13 @@ export interface Internship {
 }
 interface InternshipCardProps {
   internship: Internship;
+  onApply?: (internship: Internship) => void;
 }
 const InternshipCard: React.FC<InternshipCardProps> = ({
-  internship
+  internship,
+  onApply
 }) => {
-  return <div className="bg-white rounded-lg shadow-md p-6 transition-shadow hover:shadow-lg border border-gray-100">
+  return <div className="bg-white rounded-lg shadow-md p-6 transition-all hover:shadow-lg hover:-translate-y-0.5 border border-gray-100">
       <div className="flex items-start">
         <div className="h-16 w-16 flex-shrink-0 mr-4">
           <img src={internship.logoUrl} alt={`${internship.company} logo`} className="h-full w-full object-contain rounded-md" />
@@ -42,7 +44,7 @@ const InternshipCard: React.FC<InternshipCardProps> = ({
           </div>
         </div>
         <div>
-          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-emerald-100 text-emerald-800">
             {internship.type}
           </span>
         </div>
@@ -54,7 +56,7 @@ const InternshipCard: React.FC<InternshipCardProps> = ({
         <div className="text-sm text-gray-500">
           Posted: {internship.postedDate}
         </div>
-        <button className="px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500">
+        <button onClick={() => onApply && onApply(internship)} className="px-4 py-2 bg-emerald-600 text-white text-sm font-medium rounded-md hover:bg-emerald-700 focus:outline-none focus:ring-2 focus:ring-emerald-500 transition-colors">
           Apply Now
         </button>
       </div>

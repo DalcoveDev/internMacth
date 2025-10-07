@@ -1,6 +1,7 @@
-import React, { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { ClipboardListIcon, BriefcaseIcon, UserIcon, ClockIcon, CheckCircleIcon, XCircleIcon, EyeIcon, EditIcon, TrashIcon } from 'lucide-react';
+import { listInternships } from '../api';
 interface Internship {
   id: number;
   title: string;
@@ -31,63 +32,41 @@ const CompanyDashboard = () => {
     if (storedUser) {
       setUser(JSON.parse(storedUser));
     }
-    // Mock data for internships
-    const mockInternships = [{
-      id: 1,
-      title: 'Software Development Intern',
-      location: 'San Francisco, CA',
-      type: 'Full-time',
-      duration: '3 months',
-      postedDate: '2023-05-01',
-      status: 'approved',
-      applications: 12
-    }, {
-      id: 2,
-      title: 'Marketing Intern',
-      location: 'New York, NY',
-      type: 'Part-time',
-      duration: '6 months',
-      postedDate: '2023-05-10',
-      status: 'pending',
-      applications: 5
-    }, {
-      id: 3,
-      title: 'UX/UI Design Intern',
-      location: 'Remote',
-      type: 'Full-time',
-      duration: '4 months',
-      postedDate: '2023-04-25',
-      status: 'approved',
-      applications: 8
-    }] as Internship[];
-    // Mock data for applications
-    const mockApplications = [{
-      id: 1,
-      internshipId: 1,
-      internshipTitle: 'Software Development Intern',
-      studentName: 'Alex Johnson',
-      studentEmail: 'alex.j@example.com',
-      appliedDate: '2023-05-05',
-      status: 'pending'
-    }, {
-      id: 2,
-      internshipId: 1,
-      internshipTitle: 'Software Development Intern',
-      studentName: 'Sam Wilson',
-      studentEmail: 'samw@example.com',
-      appliedDate: '2023-05-06',
-      status: 'approved'
-    }, {
-      id: 3,
-      internshipId: 3,
-      internshipTitle: 'UX/UI Design Intern',
-      studentName: 'Jamie Smith',
-      studentEmail: 'jamie.smith@example.com',
-      appliedDate: '2023-05-02',
-      status: 'rejected'
-    }] as Application[];
-    setInternships(mockInternships);
-    setApplications(mockApplications);
+    // Try to load company internships and applications from API
+    // We assume postedById == user.id for company internships (frontend demo: user.id may be mock)
+    listInternships()
+      .then((all: any[]) => {
+        // Only show internships posted by this company (if user is set)
+        let mine = all;
+        if (user && (user as any).id) {
+          mine = all.filter((i: any) => i.postedById === (user as any).id);
+        }
+        const mapped = mine.map((i: any) => ({
+          id: i.id,
+          title: i.title,
+          location: i.location ?? 'Remote',
+          type: i.type ?? 'Full-time',
+          duration: i.duration ?? '3 months',
+          postedDate: i.createdAt,
+          status: i.isApproved
+            ? 'approved'
+            : i.isRejected
+            ? 'rejected'
+            : 'pending',
+          applications: Array.isArray(i.applications) ? i.applications.length : 0,
+        })) as Internship[];
+        setInternships(mapped);
+      })
+      .catch(() => {
+        setInternships([]);
+      });
+
+    fetch('/api/applications').then(r => r.json()).then((apps: any[]) => {
+      const mapped = apps.map(a => ({ id: a.id, internshipId: a.internshipId, internshipTitle: a.internship?.title ?? '', studentName: a.studentName, studentEmail: a.studentEmail, appliedDate: a.createdAt, status: a.status }))
+      setApplications(mapped)
+    }).catch(() => {
+      setApplications([])
+    })
   }, []);
   const handleApproveApplication = (id: number) => {
     setApplications(prev => prev.map(app => app.id === id ? {
@@ -125,16 +104,18 @@ const CompanyDashboard = () => {
   return <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
       <div className="bg-white shadow-md rounded-lg overflow-hidden">
         {/* Dashboard Header */}
-        <div className="bg-gradient-to-r from-blue-600 to-indigo-700 p-6 text-white">
+        <div className="bg-emerald-600 p-6 text-white">
           <h1 className="text-2xl font-bold">Company Dashboard</h1>
-          <p className="mt-1">Welcome back, {user?.name}</p>
+          <p className="mt-1">
+            Welcome back, {typeof user === 'object' && user && 'name' in user ? (user as any).name : ''}
+          </p>
         </div>
         {/* Dashboard Stats */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 p-6 bg-gray-50 border-b">
           <div className="bg-white p-4 rounded-lg shadow-sm">
             <div className="flex items-center">
-              <div className="flex-shrink-0 bg-blue-100 rounded-md p-3">
-                <BriefcaseIcon size={24} className="text-blue-600" />
+              <div className="flex-shrink-0 bg-emerald-100 rounded-md p-3">
+                <BriefcaseIcon size={24} className="text-emerald-600" />
               </div>
               <div className="ml-4">
                 <h3 className="text-sm font-medium text-gray-500">
@@ -198,7 +179,7 @@ const CompanyDashboard = () => {
                 <h2 className="text-lg font-medium text-gray-900">
                   Your Internship Listings
                 </h2>
-                <Link to="/post-internship" className="px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-md hover:bg-blue-700">
+                <Link to="/post-internship" className="px-4 py-2 bg-emerald-600 text-white text-sm font-medium rounded-md hover:bg-emerald-700 transition-colors">
                   Post New Internship
                 </Link>
               </div>
@@ -250,7 +231,7 @@ const CompanyDashboard = () => {
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                             <div className="flex justify-end space-x-2">
-                              <button className="text-blue-600 hover:text-blue-900">
+                              <button className="text-emerald-600 hover:text-emerald-800">
                                 <EyeIcon size={18} />
                               </button>
                               <button className="text-indigo-600 hover:text-indigo-900">
@@ -268,7 +249,7 @@ const CompanyDashboard = () => {
                   <p className="text-gray-500 mb-4">
                     You haven't posted any internships yet.
                   </p>
-                  <Link to="/post-internship" className="px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-md hover:bg-blue-700">
+                  <Link to="/post-internship" className="px-4 py-2 bg-emerald-600 text-white text-sm font-medium rounded-md hover:bg-emerald-700 transition-colors">
                     Post Your First Internship
                   </Link>
                 </div>}
@@ -296,14 +277,14 @@ const CompanyDashboard = () => {
                         {getStatusBadge(application.status)}
                       </div>
                       <div className="mt-4 flex justify-between items-center">
-                        <Link to={`/application/${application.id}`} className="text-blue-600 hover:text-blue-800 text-sm font-medium">
+                        <Link to={`/application/${application.id}`} className="text-emerald-600 hover:text-emerald-800 text-sm font-medium">
                           View Application
                         </Link>
                         {application.status === 'pending' && <div className="flex space-x-2">
                             <button onClick={() => handleRejectApplication(application.id)} className="px-3 py-1 border border-gray-300 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-50">
                               Reject
                             </button>
-                            <button onClick={() => handleApproveApplication(application.id)} className="px-3 py-1 bg-blue-600 border border-blue-600 rounded-md text-sm font-medium text-white hover:bg-blue-700">
+                            <button onClick={() => handleApproveApplication(application.id)} className="px-3 py-1 bg-emerald-600 border border-emerald-600 rounded-md text-sm font-medium text-white hover:bg-emerald-700">
                               Approve
                             </button>
                           </div>}
@@ -336,13 +317,22 @@ const CompanyDashboard = () => {
                     <label className="block text-sm font-medium text-gray-700 mb-1">
                       Company Name
                     </label>
-                    <input type="text" className="w-full px-4 py-2 border border-gray-300 rounded-md" defaultValue={user?.name} />
+                    <input
+                      type="text"
+                      className="w-full px-4 py-2 border border-gray-300 rounded-md"
+                      defaultValue={user && 'name' in user ? (user as any).name : ''}
+                    />
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">
                       Email
                     </label>
-                    <input type="email" className="w-full px-4 py-2 border border-gray-300 rounded-md" defaultValue={user?.email} disabled />
+                    <input
+                      type="email"
+                      className="w-full px-4 py-2 border border-gray-300 rounded-md"
+                      defaultValue={user && 'email' in user ? (user as any).email : ''}
+                      disabled
+                    />
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -371,7 +361,7 @@ const CompanyDashboard = () => {
                   </div>
                 </div>
                 <div className="mt-6">
-                  <button className="px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-md hover:bg-blue-700">
+                  <button className="px-4 py-2 bg-emerald-600 text-white text-sm font-medium rounded-md hover:bg-emerald-700 transition-colors">
                     Save Changes
                   </button>
                 </div>

@@ -55,7 +55,7 @@ const Home = () => {
           </div>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
             <div className="text-center p-6">
-              <div className="inline-flex items-center justify-center h-16 w-16 rounded-full bg-blue-100 text-blue-600 mb-4">
+              <div className="inline-flex items-center justify-center h-16 w-16 rounded-full bg-emerald-100 text-emerald-600 mb-4">
                 <SearchIcon size={32} />
               </div>
               <h3 className="text-xl font-semibold mb-2">Explore Internships</h3>
@@ -68,7 +68,7 @@ const Home = () => {
              </p>
             </div>
             <div className="text-center p-6">
-              <div className="inline-flex items-center justify-center h-16 w-16 rounded-full bg-blue-100 text-blue-600 mb-4">
+              <div className="inline-flex items-center justify-center h-16 w-16 rounded-full bg-emerald-100 text-emerald-600 mb-4">
                 <UserIcon size={32} />
               </div>
               <h3 className="text-xl font-semibold mb-2">Apply with One Click</h3>
@@ -81,7 +81,7 @@ const Home = () => {
               </p>
             </div>
             <div className="text-center p-6">
-              <div className="inline-flex items-center justify-center h-16 w-16 rounded-full bg-blue-100 text-blue-600 mb-4">
+              <div className="inline-flex items-center justify-center h-16 w-16 rounded-full bg-emerald-100 text-emerald-600 mb-4">
                 <BuildingIcon size={32} />
               </div>
               <h3 className="text-xl font-semibold mb-2">For Organizations</h3>
@@ -108,7 +108,7 @@ const Home = () => {
                 Discover top opportunities from leading companies
               </p>
             </div>
-            <Link to="/search" className="text-blue-600 font-medium hover:text-blue-800 flex items-center">
+            <Link to="/search" className="text-emerald-600 font-medium hover:text-emerald-800 flex items-center">
               View all
               <TrendingUpIcon size={16} className="ml-1" />
             </Link>
@@ -119,7 +119,7 @@ const Home = () => {
         </div>
       </section>
       {/* Call to Action Section */}
-      <section className="py-16 bg-blue-600 text-white">
+      <section className="py-16 bg-emerald-600 text-white">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
           <h2 className="text-3xl font-bold mb-4">
             Ready to Find Your Next Internship?
@@ -129,10 +129,10 @@ const Home = () => {
             match on our platform.
           </p>
           <div className="flex flex-col sm:flex-row justify-center space-y-4 sm:space-y-0 sm:space-x-4">
-            <Link to="/search" className="px-8 py-3 bg-white text-blue-600 font-medium rounded-md hover:bg-gray-100">
+            <Link to="/search" className="px-8 py-3 bg-white text-emerald-600 font-medium rounded-md hover:bg-gray-100">
               Browse Internships
             </Link>
-            <Link to="/post-internship" className="px-8 py-3 bg-blue-800 text-white font-medium rounded-md hover:bg-blue-900">
+            <Link to="/post-internship" className="px-8 py-3 bg-emerald-700 text-white font-medium rounded-md hover:bg-emerald-800">
               Post an Internship
             </Link>
           </div>

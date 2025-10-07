@@ -51,37 +51,32 @@ const Navigation = () => {
   };
 
   return (
-    <nav className="bg-white shadow-xl border-b-2 border-gradient-to-r from-cyan-400 to-blue-500 sticky top-0 z-50">
+    <nav className="bg-white border-b border-gray-100 sticky top-0 z-50">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between h-20">
           {/* Logo */}
           <div className="flex items-center">
             <Link to="/" className="flex-shrink-0 flex items-center group">
               <div className="flex items-center space-x-3">
-                <div className="w-12 h-12 bg-gradient-to-br from-cyan-400 via-blue-500 to-indigo-600 rounded-xl flex items-center justify-center shadow-lg transform rotate-3 hover:rotate-0 transition-all duration-300">
-                  <span className="text-white font-black text-lg">I</span>
+                <div className="w-10 h-10 rounded-lg bg-emerald-600 text-white flex items-center justify-center ring-1 ring-emerald-200">
+                  <span className="font-bold">I</span>
                 </div>
-                <div>
-                  <span className="text-2xl font-black font-heading bg-gradient-to-r from-gray-900 via-blue-900 to-cyan-700 bg-clip-text text-transparent">
-                    InternMatch
-                  </span>
-                  <div className="h-1 w-full bg-gradient-to-r from-cyan-400 to-blue-500 rounded-full"></div>
-                </div>
+                <span className="text-xl font-black font-heading text-gray-900">InternMatch</span>
               </div>
             </Link>
           </div>
 
           {/* Desktop Navigation */}
-          <div className="hidden md:flex items-center space-x-2">
+          <div className="hidden md:flex items-center space-x-1">
             <Link 
               to="/" 
-              className="px-6 py-3 rounded-xl text-base font-bold text-gray-800 hover:text-white hover:bg-gradient-to-r hover:from-cyan-400 hover:to-blue-500 transform hover:scale-105 hover:shadow-lg transition-all duration-300"
+              className="px-4 py-2 rounded-md text-sm font-medium text-gray-700 hover:text-emerald-700 hover:underline decoration-emerald-400 underline-offset-4 transition-colors"
             >
               Home
             </Link>
             <Link 
               to="/search" 
-              className="px-6 py-3 rounded-xl text-base font-bold text-gray-800 hover:text-white hover:bg-gradient-to-r hover:from-cyan-400 hover:to-blue-500 transform hover:scale-105 hover:shadow-lg transition-all duration-300"
+              className="px-4 py-2 rounded-md text-sm font-medium text-gray-700 hover:text-emerald-700 hover:underline decoration-emerald-400 underline-offset-4 transition-colors"
             >
               Find Internships
             </Link>
@@ -89,25 +84,25 @@ const Navigation = () => {
             {user && (user as { role: string }).role === 'company' && (
               <Link 
                 to="/post-internship" 
-                className="px-6 py-3 rounded-xl text-base font-bold text-gray-800 hover:text-white hover:bg-gradient-to-r hover:from-cyan-400 hover:to-blue-500 transform hover:scale-105 hover:shadow-lg transition-all duration-300"
+                className="ml-2 px-4 py-2 rounded-md text-sm font-semibold text-white bg-emerald-600 hover:bg-emerald-700 transition-colors"
               >
                 Post Internship
               </Link>
             )}
 
             {/* Auth Section */}
-            <div className="flex items-center space-x-4 ml-8">
+            <div className="flex items-center space-x-3 ml-6">
               {!user ? (
                 <>
                   <Link 
                     to="/login" 
-                    className="px-6 py-3 rounded-xl text-base font-bold text-gray-700 hover:text-gray-900 bg-gray-100 hover:bg-gray-200 border-2 border-gray-300 hover:border-gray-400 transform hover:scale-105 transition-all duration-300"
+                    className="px-4 py-2 rounded-md text-sm font-medium text-gray-700 border border-gray-300 hover:border-emerald-300 hover:text-emerald-700 transition-colors"
                   >
                     Login
                   </Link>
                   <Link 
                     to="/signup" 
-                    className="px-8 py-3 rounded-xl text-base font-black text-white bg-gradient-to-r from-cyan-400 via-blue-500 to-indigo-600 hover:from-cyan-500 hover:via-blue-600 hover:to-indigo-700 shadow-xl hover:shadow-2xl transform hover:scale-110 hover:-translate-y-1 transition-all duration-300 animate-pulse"
+                    className="px-4 py-2 rounded-md text-sm font-semibold text-white bg-emerald-600 hover:bg-emerald-700 transition-colors"
                   >
                     Sign Up Now!
                   </Link>
@@ -116,35 +111,35 @@ const Navigation = () => {
                 <div className="relative">
                   <button
                     onClick={() => setIsUserMenuOpen(!isUserMenuOpen)}
-                    className="flex items-center space-x-3 px-5 py-3 rounded-xl text-base font-bold text-white bg-gradient-to-r from-gray-700 to-gray-900 border-2 border-gray-600 hover:border-cyan-400 shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-300"
+                  className="flex items-center space-x-2 px-3 py-2 rounded-md text-sm font-medium text-gray-800 border border-gray-300 hover:border-emerald-300 transition-colors"
                   >
                     <div className="p-1 bg-white/20 rounded-lg">
                       {getUserIcon()}
                     </div>
                     <span className="hidden sm:block">{(user as {name: string}).name}</span>
-                    <span className="hidden sm:block text-xs bg-cyan-400 text-gray-900 px-3 py-1 rounded-full font-black uppercase tracking-wide">
+                  <span className="hidden sm:block text-xs bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded-full font-semibold uppercase tracking-wide">
                       {(user as {role: string}).role}
                     </span>
                   </button>
 
                   {isUserMenuOpen && (
-                    <div className="absolute right-0 mt-3 w-64 rounded-2xl shadow-2xl bg-white ring-2 ring-cyan-200 z-20 border-t-4 border-gradient-to-r from-cyan-400 to-blue-500">
-                      <div className="p-4">
+                    <div className="absolute right-0 mt-2 w-60 rounded-lg shadow-lg bg-white ring-1 ring-gray-100 z-20">
+                      <div className="p-2">
                         <Link
                           to={getDashboardLink()}
-                          className="flex items-center space-x-3 w-full px-4 py-3 text-base font-bold text-gray-800 hover:text-white hover:bg-gradient-to-r hover:from-cyan-400 hover:to-blue-500 rounded-xl transform hover:scale-105 transition-all duration-300"
+                          className="flex items-center space-x-2 w-full px-3 py-2 text-sm font-medium text-gray-800 hover:text-emerald-800 hover:bg-emerald-50 rounded-md transition-colors"
                           onClick={() => setIsUserMenuOpen(false)}
                         >
-                          <div className="p-1 bg-gray-200 rounded-lg">
+                          <div className="p-1 bg-gray-100 rounded-md">
                             {getUserIcon()}
                           </div>
                           <span>Dashboard</span>
                         </Link>
                         <button
                           onClick={handleLogout}
-                          className="flex items-center space-x-3 w-full px-4 py-3 text-base font-bold text-red-600 hover:text-white hover:bg-gradient-to-r hover:from-red-500 hover:to-red-600 rounded-xl transform hover:scale-105 transition-all duration-300 mt-2"
+                          className="flex items-center space-x-2 w-full px-3 py-2 text-sm font-medium text-red-600 hover:text-red-700 hover:bg-red-50 rounded-md transition-colors mt-1"
                         >
-                          <div className="p-1 bg-red-100 rounded-lg">
+                          <div className="p-1 bg-red-100 rounded-md">
                             <LogOut size={16} />
                           </div>
                           <span>Logout</span>
@@ -163,17 +158,17 @@ const Navigation = () => {
               <div className="relative">
                 <button
                   onClick={() => setIsUserMenuOpen(!isUserMenuOpen)}
-                  className="p-2 rounded-lg text-gray-700 hover:bg-gray-100/80 transition-all duration-200"
+                  className="p-2 rounded-md text-gray-700 hover:bg-gray-100 transition-colors"
                 >
                   {getUserIcon()}
                 </button>
 
                 {isUserMenuOpen && (
-                  <div className="absolute right-0 mt-2 w-48 rounded-xl shadow-lg bg-white/95 backdrop-blur-md ring-1 ring-gray-200/50 z-20">
+                  <div className="absolute right-0 mt-2 w-48 rounded-lg shadow-lg bg-white ring-1 ring-gray-100 z-20">
                     <div className="p-2">
                       <Link
                         to={getDashboardLink()}
-                        className="flex items-center space-x-2 w-full px-3 py-2 text-sm text-gray-700 hover:bg-blue-50/50 rounded-lg transition-all duration-200"
+                        className="flex items-center space-x-2 w-full px-3 py-2 text-sm text-gray-700 hover:bg-emerald-50 rounded-md transition-colors"
                         onClick={() => setIsUserMenuOpen(false)}
                       >
                         {getUserIcon()}
@@ -181,7 +176,7 @@ const Navigation = () => {
                       </Link>
                       <button
                         onClick={handleLogout}
-                        className="flex items-center space-x-2 w-full px-3 py-2 text-sm text-red-600 hover:bg-red-50/50 rounded-lg transition-all duration-200"
+                        className="flex items-center space-x-2 w-full px-3 py-2 text-sm text-red-600 hover:bg-red-50 rounded-md transition-colors"
                       >
                         <LogOut size={16} />
                         <span>Logout</span>
@@ -194,7 +189,7 @@ const Navigation = () => {
 
             <button
               onClick={() => setIsMenuOpen(!isMenuOpen)}
-              className="p-2 rounded-lg text-gray-700 hover:text-primary hover:bg-blue-50/50 transition-all duration-200"
+              className="p-2 rounded-md text-gray-700 hover:text-emerald-700 hover:bg-emerald-50 transition-colors"
             >
               {isMenuOpen ? <X size={24} /> : <Menu size={24} />}
             </button>
@@ -204,18 +199,18 @@ const Navigation = () => {
 
       {/* Mobile Menu */}
       {isMenuOpen && (
-        <div className="md:hidden bg-white/95 backdrop-blur-md border-t border-gray-100">
+        <div className="md:hidden bg-white border-t border-gray-100">
           <div className="px-4 py-4 space-y-2">
             <Link
               to="/"
-              className="block px-4 py-3 rounded-lg text-base font-medium text-gray-700 hover:text-primary hover:bg-blue-50/50 transition-all duration-200"
+              className="block px-3 py-2 rounded-md text-base font-medium text-gray-700 hover:text-emerald-700 hover:bg-emerald-50 transition-colors"
               onClick={() => setIsMenuOpen(false)}
             >
               Home
             </Link>
             <Link
               to="/search"
-              className="block px-4 py-3 rounded-lg text-base font-medium text-gray-700 hover:text-primary hover:bg-blue-50/50 transition-all duration-200"
+              className="block px-3 py-2 rounded-md text-base font-medium text-gray-700 hover:text-emerald-700 hover:bg-emerald-50 transition-colors"
               onClick={() => setIsMenuOpen(false)}
             >
               Find Internships
@@ -224,7 +219,7 @@ const Navigation = () => {
             {user && (user as { role: string }).role === 'company' && (
               <Link
                 to="/post-internship"
-                className="block px-4 py-3 rounded-lg text-base font-medium text-gray-700 hover:text-primary hover:bg-blue-50/50 transition-all duration-200"
+                className="block px-3 py-2 rounded-md text-base font-medium text-gray-700 hover:text-emerald-700 hover:bg-emerald-50 transition-colors"
                 onClick={() => setIsMenuOpen(false)}
               >
                 Post Internship
@@ -235,14 +230,14 @@ const Navigation = () => {
               <div className="pt-4 space-y-2 border-t border-gray-200/50">
                 <Link
                   to="/login"
-                  className="block px-4 py-3 rounded-lg text-base font-medium text-gray-700 hover:text-primary hover:bg-gray-50 transition-all duration-200"
+                  className="block px-3 py-2 rounded-md text-base font-medium text-gray-700 hover:text-emerald-700 hover:bg-emerald-50 transition-colors"
                   onClick={() => setIsMenuOpen(false)}
                 >
                   Login
                 </Link>
                 <Link
                   to="/signup"
-                  className="block px-4 py-3 rounded-lg text-base font-semibold text-white bg-gradient-to-r from-cyan-400 to-blue-500 hover:from-cyan-500 hover:to-blue-600 transition-all duration-200"
+                  className="block px-3 py-2 rounded-md text-base font-semibold text-white bg-emerald-600 hover:bg-emerald-700 transition-colors"
                   onClick={() => setIsMenuOpen(false)}
                 >
                   Sign Up

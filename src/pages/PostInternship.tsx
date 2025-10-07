@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { postInternship } from '../api';
 import { CheckCircleIcon } from 'lucide-react';
 const PostInternship = () => {
   const [formData, setFormData] = useState({
@@ -27,14 +28,23 @@ const PostInternship = () => {
   };
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    // In a real app, this would submit the data to an API
-    console.log('Form submitted:', formData);
-    setIsSubmitted(true);
+    // Submit to backend API (if running)
+    postInternship({
+      title: formData.jobTitle,
+      company: formData.companyName,
+      location: formData.location,
+      description: formData.description,
+      skills: formData.requirements,
+      postedById: 1
+    }).then(() => setIsSubmitted(true)).catch(err => {
+      console.error('Failed to post internship', err);
+      alert('Failed to post internship. Please try again.');
+    });
   };
   if (isSubmitted) {
     return <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
         <div className="bg-white p-8 rounded-lg shadow-md text-center">
-          <div className="inline-flex items-center justify-center h-16 w-16 rounded-full bg-green-100 text-green-600 mb-6">
+          <div className="inline-flex items-center justify-center h-16 w-16 rounded-full bg-emerald-100 text-emerald-600 mb-6">
             <CheckCircleIcon size={32} />
           </div>
           <h2 className="text-2xl font-bold text-gray-900 mb-4">
@@ -45,7 +55,7 @@ const PostInternship = () => {
             You'll receive a confirmation email shortly.
           </p>
           <div className="flex justify-center">
-            <button onClick={() => setIsSubmitted(false)} className="px-6 py-3 bg-blue-600 text-white font-medium rounded-md hover:bg-blue-700">
+            <button onClick={() => setIsSubmitted(false)} className="px-6 py-3 bg-emerald-600 text-white font-medium rounded-md hover:bg-emerald-700 transition-colors">
               Post Another Internship
             </button>
           </div>
@@ -71,19 +81,19 @@ const PostInternship = () => {
                 <label htmlFor="companyName" className="block text-sm font-medium text-gray-700 mb-1">
                   Company Name *
                 </label>
-                <input type="text" id="companyName" name="companyName" required className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500" value={formData.companyName} onChange={handleChange} />
+                <input type="text" id="companyName" name="companyName" required className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-emerald-500 focus:border-emerald-500" value={formData.companyName} onChange={handleChange} />
               </div>
               <div>
                 <label htmlFor="companyWebsite" className="block text-sm font-medium text-gray-700 mb-1">
                   Company Website
                 </label>
-                <input type="url" id="companyWebsite" name="companyWebsite" className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500" value={formData.companyWebsite} onChange={handleChange} />
+                <input type="url" id="companyWebsite" name="companyWebsite" className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-emerald-500 focus:border-emerald-500" value={formData.companyWebsite} onChange={handleChange} />
               </div>
               <div>
                 <label htmlFor="contactEmail" className="block text-sm font-medium text-gray-700 mb-1">
                   Contact Email *
                 </label>
-                <input type="email" id="contactEmail" name="contactEmail" required className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500" value={formData.contactEmail} onChange={handleChange} />
+                <input type="email" id="contactEmail" name="contactEmail" required className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-emerald-500 focus:border-emerald-500" value={formData.contactEmail} onChange={handleChange} />
               </div>
             </div>
           </div>
@@ -97,19 +107,19 @@ const PostInternship = () => {
                 <label htmlFor="jobTitle" className="block text-sm font-medium text-gray-700 mb-1">
                   Job Title *
                 </label>
-                <input type="text" id="jobTitle" name="jobTitle" required className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500" value={formData.jobTitle} onChange={handleChange} />
+                <input type="text" id="jobTitle" name="jobTitle" required className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-emerald-500 focus:border-emerald-500" value={formData.jobTitle} onChange={handleChange} />
               </div>
               <div>
                 <label htmlFor="location" className="block text-sm font-medium text-gray-700 mb-1">
                   Location *
                 </label>
-                <input type="text" id="location" name="location" required placeholder="City, State or Remote" className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500" value={formData.location} onChange={handleChange} />
+                <input type="text" id="location" name="location" required placeholder="City, State or Remote" className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-emerald-500 focus:border-emerald-500" value={formData.location} onChange={handleChange} />
               </div>
               <div>
                 <label htmlFor="type" className="block text-sm font-medium text-gray-700 mb-1">
                   Type *
                 </label>
-                <select id="type" name="type" required className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500" value={formData.type} onChange={handleChange}>
+                <select id="type" name="type" required className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-emerald-500 focus:border-emerald-500" value={formData.type} onChange={handleChange}>
                   <option value="Full-time">Full-time</option>
                   <option value="Part-time">Part-time</option>
                 </select>
@@ -118,7 +128,7 @@ const PostInternship = () => {
                 <label htmlFor="duration" className="block text-sm font-medium text-gray-700 mb-1">
                   Duration *
                 </label>
-                <select id="duration" name="duration" required className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500" value={formData.duration} onChange={handleChange}>
+                <select id="duration" name="duration" required className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-emerald-500 focus:border-emerald-500" value={formData.duration} onChange={handleChange}>
                   <option value="3 months">3 months</option>
                   <option value="4 months">4 months</option>
                   <option value="6 months">6 months</option>
@@ -129,13 +139,13 @@ const PostInternship = () => {
                 <label htmlFor="description" className="block text-sm font-medium text-gray-700 mb-1">
                   Job Description *
                 </label>
-                <textarea id="description" name="description" required rows={6} className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500" value={formData.description} onChange={handleChange}></textarea>
+                <textarea id="description" name="description" required rows={6} className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-emerald-500 focus:border-emerald-500" value={formData.description} onChange={handleChange}></textarea>
               </div>
               <div className="md:col-span-2">
                 <label htmlFor="requirements" className="block text-sm font-medium text-gray-700 mb-1">
                   Requirements *
                 </label>
-                <textarea id="requirements" name="requirements" required rows={4} placeholder="List skills and qualifications required for this position" className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500" value={formData.requirements} onChange={handleChange}></textarea>
+                <textarea id="requirements" name="requirements" required rows={4} placeholder="List skills and qualifications required for this position" className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-emerald-500 focus:border-emerald-500" value={formData.requirements} onChange={handleChange}></textarea>
               </div>
             </div>
           </div>
@@ -149,13 +159,13 @@ const PostInternship = () => {
                 <label htmlFor="applicationDeadline" className="block text-sm font-medium text-gray-700 mb-1">
                   Application Deadline
                 </label>
-                <input type="date" id="applicationDeadline" name="applicationDeadline" className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500" value={formData.applicationDeadline} onChange={handleChange} />
+                <input type="date" id="applicationDeadline" name="applicationDeadline" className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-emerald-500 focus:border-emerald-500" value={formData.applicationDeadline} onChange={handleChange} />
               </div>
               <div>
                 <label htmlFor="applicationLink" className="block text-sm font-medium text-gray-700 mb-1">
                   Application Link
                 </label>
-                <input type="url" id="applicationLink" name="applicationLink" placeholder="External link to apply (optional)" className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500" value={formData.applicationLink} onChange={handleChange} />
+                <input type="url" id="applicationLink" name="applicationLink" placeholder="External link to apply (optional)" className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-emerald-500 focus:border-emerald-500" value={formData.applicationLink} onChange={handleChange} />
               </div>
             </div>
           </div>
@@ -163,7 +173,7 @@ const PostInternship = () => {
           <div className="mb-6">
             <div className="flex items-start">
               <div className="flex items-center h-5">
-                <input id="terms" name="terms" type="checkbox" required className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded" />
+                <input id="terms" name="terms" type="checkbox" required className="h-4 w-4 text-emerald-600 focus:ring-emerald-500 border-gray-300 rounded" />
               </div>
               <div className="ml-3 text-sm">
                 <label htmlFor="terms" className="font-medium text-gray-700">
@@ -177,7 +187,7 @@ const PostInternship = () => {
             </div>
           </div>
           <div className="flex justify-end">
-            <button type="submit" className="px-6 py-3 bg-blue-600 text-white font-medium rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500">
+            <button type="submit" className="px-6 py-3 bg-emerald-600 text-white font-medium rounded-md hover:bg-emerald-700 focus:outline-none focus:ring-2 focus:ring-emerald-500 transition-colors">
               Post Internship
             </button>
           </div>

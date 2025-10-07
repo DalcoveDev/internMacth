@@ -1,0 +1,78 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id        Int      @id @default(autoincrement())
+  email     String   @unique
+  password  String
+  name      String?
+  role      String   @default("student")
+  createdAt DateTime @default(now())
+  internships Internship[] @relation("PostedBy")
+  // Back-relations
+  companiesOwned Company[] @relation("UserOwnsCompanies")
+  studentProfile Student?
+}
+
+model Company {
+  id          Int       @id @default(autoincrement())
+  name        String
+  email       String?
+  website     String?
+  location    String?
+  description String?
+  ownerUserId Int?
+  ownerUser   User?     @relation("UserOwnsCompanies", fields: [ownerUserId], references: [id])
+  createdAt   DateTime  @default(now())
+  // Relation to internships when companies are first-class entities
+  internships Internship[]
+}
+
+model Student {
+  id        Int      @id @default(autoincrement())
+  userId    Int      @unique
+  user      User     @relation(fields: [userId], references: [id])
+  university String?
+  major      String?
+  resumeUrl  String?
+  createdAt  DateTime @default(now())
+  applications Application[] @relation("StudentApplications")
+}
+
+model Internship {
+  id          Int      @id @default(autoincrement())
+  title       String
+  company     String
+  location    String?
+  description String?
+  skills      String?   // comma-separated for simplicity
+  postedById  Int
+  postedBy    User     @relation("PostedBy", fields: [postedById], references: [id])
+  // Optional linkage to Company
+  companyId   Int?
+  companyRef  Company? @relation(fields: [companyId], references: [id])
+  applications Application[]
+  isApproved  Boolean  @default(false)
+  createdAt   DateTime @default(now())
+}
+
+model Application {
+  id           Int      @id @default(autoincrement())
+  internshipId Int
+  internship   Internship @relation(fields: [internshipId], references: [id])
+  studentName  String
+  studentEmail String
+  // Optional linkage to a Student profile
+  studentId    Int?
+  student      Student? @relation("StudentApplications", fields: [studentId], references: [id])
+  coverLetter  String?
+  skills       String?
+  status       String   @default("pending")
+  createdAt    DateTime @default(now())
+}
