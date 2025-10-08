@@ -9,7 +9,12 @@
     "start": "node dist/index.js",
     "prisma:generate": "prisma generate",
     "prisma:migrate": "prisma migrate dev --name init",
-    "prisma:seed": "ts-node prisma/seed.ts"
+    "prisma:seed": "ts-node prisma/seed.ts",
+    "db:start": "cd .. && docker-compose up -d",
+    "db:stop": "cd .. && docker-compose down",
+    "db:reset": "cd .. && docker-compose down -v && docker-compose up -d && sleep 10 && npx prisma migrate dev --name init",
+    "db:test": "node test-manual-mysql.js",
+    "db:test:xampp": "node test-xampp-mysql.js"
   },
   "prisma": {
     "seed": "ts-node prisma/seed.ts"

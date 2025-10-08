@@ -38,18 +38,22 @@ app.use(express.json({ limit: '10mb' }))
 app.use(express.urlencoded({ extended: true, limit: '10mb' }))
 
 // Rate limiting
+const isDevelopment = process.env.NODE_ENV === 'development';
+
 const authLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 5, // limit each IP to 5 requests per windowMs
+  max: isDevelopment ? 100 : 20, // Higher limit in development
   message: 'Too many authentication attempts, please try again later.',
   standardHeaders: true,
   legacyHeaders: false,
+  skip: () => isDevelopment // Skip rate limiting in development
 })
 
 const generalLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 100, // limit each IP to 100 requests per windowMs
+  max: isDevelopment ? 10000 : 1000, // Higher limit in development
   message: 'Too many requests from this IP, please try again later.',
+  skip: () => isDevelopment // Skip rate limiting in development
 })
 
 // Apply rate limiting
@@ -65,13 +69,25 @@ app.use('/api/internships', authMiddleware, internshipsRouter)
 app.use('/api/applications', authMiddleware, applicationsRouter)
 
 // Health check endpoint
-app.get('/api/health', (req: any, res: any) => {
-  res.json({ 
-    status: 'OK', 
-    timestamp: new Date().toISOString(),
-    uptime: process.uptime()
-  })
-})
+app.get('/api/health', async (req: any, res: any) => {
+  try {
+    // Test database connection
+    await prisma.$queryRaw`SELECT 1`;
+    res.json({ 
+      status: 'OK', 
+      timestamp: new Date().toISOString(),
+      uptime: process.uptime(),
+      database: 'Connected'
+    });
+  } catch (error) {
+    res.status(500).json({ 
+      status: 'ERROR', 
+      timestamp: new Date().toISOString(),
+      error: 'Database connection failed',
+      database: 'Disconnected'
+    });
+  }
+});
 
 // Global error handler
 app.use((err: any, req: any, res: any, next: any) => {

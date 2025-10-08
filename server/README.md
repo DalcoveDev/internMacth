@@ -4,6 +4,30 @@ Base URL: `/api`
 
 Auth: JWT (HS256) with `Authorization: Bearer <token>` where applicable. Current routes do not strictly enforce auth middleware yet; add `authMiddleware` to protect routes when ready.
 
+## Database Setup
+
+The application supports both SQLite (for development) and MySQL (for production). By default, it uses SQLite.
+
+To switch to MySQL:
+
+### Option 1: Using Docker (Recommended)
+1. Install Docker Desktop
+2. Run `docker-compose up -d` from the project root
+3. Update the DATABASE_URL in `.env` to use MySQL
+4. Run `npx prisma migrate dev --name init`
+
+### Option 2: Manual Installation
+1. Install MySQL Server manually
+2. Create the database and user as described in MANUAL_MYSQL_SETUP.md
+3. Update the DATABASE_URL in `.env` with your MySQL credentials
+4. Run `npx prisma migrate dev --name init`
+
+### Option 3: XAMPP MySQL
+1. Start MySQL service in XAMPP Control Panel
+2. Create the "internmatch" database using phpMyAdmin
+3. The DATABASE_URL in `.env` is already configured for XAMPP
+4. Run `npx prisma migrate dev --name init`
+
 ## Auth
 
 POST `/auth/signup`
@@ -77,9 +101,11 @@ Notes:
 
 ## Environment
 
-- `DATABASE_URL` (MySQL)
+- `DATABASE_URL` (SQLite or MySQL)
 - `JWT_SECRET`
 - `PORT` (default 4000)
+
+For MySQL setup, see SETUP_MYSQL.md for detailed instructions.
 
 ## Future Hardening
 

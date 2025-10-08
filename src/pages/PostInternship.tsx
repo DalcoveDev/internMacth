@@ -93,8 +93,12 @@ const PostInternship = () => {
     
     // Check if we have a valid token (not a demo token)
     const token = localStorage.getItem('token');
-    if (!token || token.startsWith('demo_token_')) {
-      showError('Session Expired', 'Your session has expired. Please log out and log back in.');
+    if (!token) {
+      showError('Authentication Required', 'Please log in to post an internship.');
+      return;
+    }
+    if (token.startsWith('demo_token_')) {
+      showError('Demo Mode Detected', 'You are currently in demo mode. Please log out and log back in with valid credentials to post internships.');
       return;
     }
     
@@ -139,6 +143,8 @@ const PostInternship = () => {
         showError('Invalid Data', 'Please check your form data and try again.');
       } else if (err.message.includes('401')) {
         showError('Authentication Error', 'Your session has expired. Please log out and log back in.');
+      } else if (err.message.includes('429')) {
+        showError('Rate Limit Exceeded', 'You have made too many requests. Please wait a few minutes and try again.');
       } else if (err.message.includes('500')) {
         showError('Server Error', 'Internal server error. Please try again later.');
       } else {

@@ -22,7 +22,7 @@ const About = () => {
             <div className="relative order-2 lg:order-1">
               <div className="relative overflow-hidden rounded-2xl shadow-2xl transform hover:scale-105 transition-transform duration-300">
                 <img 
-                  src="/images/new.jpeg" 
+                  src="/src/images/Internship.jpeg" 
                   alt="Professional collaboration" 
                   className="w-full h-96 object-cover"
                 />
@@ -74,7 +74,7 @@ const About = () => {
         {/* Background Image */}
         <div 
           className="absolute inset-0 bg-cover bg-center bg-no-repeat opacity-5"
-          style={{ backgroundImage: `url('/images/Paper art and digital craft style of landscape with green eco urban city, earth day and world environment day concept_ _ Premium Vector.jpeg')` }}
+          style={{ backgroundImage: `url('/src/images/Daily 3D renders — abstract cloth edition.jpeg')` }}
         ></div>
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
           <div className="text-center mb-12">
@@ -161,7 +161,7 @@ const About = () => {
         {/* Background Image */}
         <div 
           className="absolute inset-0 bg-cover bg-center bg-no-repeat opacity-10"
-          style={{ backgroundImage: `url('/images/Download Abstract green papercut style layers background for free.jpeg')` }}
+          style={{ backgroundImage: `url('/src/images/Download Abstract green papercut style layers background for free.jpeg')` }}
         ></div>
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
           <div className="text-center mb-16">

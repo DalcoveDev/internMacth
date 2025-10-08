@@ -9,7 +9,7 @@ const Services = () => {
         {/* Background Image */}
         <div 
           className="absolute inset-0 bg-cover bg-center bg-no-repeat opacity-20"
-          style={{ backgroundImage: `url('/images/Daily 3D renders — abstract cloth edition.jpeg')` }}
+          style={{ backgroundImage: `url('/src/images/Daily 3D renders — abstract cloth edition.jpeg')` }}
         ></div>
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center relative z-10">
           <h1 className="text-4xl md:text-5xl font-bold mb-6">Our Services</h1>
@@ -31,7 +31,7 @@ const Services = () => {
                 {/* Main Image */}
                 <div className="relative overflow-hidden rounded-3xl shadow-2xl transform hover:rotate-1 transition-all duration-500">
                   <img 
-                    src="/images/Daily 3D renders — abstract cloth edition.jpeg" 
+                    src="/src/images/Daily 3D renders — abstract cloth edition.jpeg" 
                     alt="Innovative solutions" 
                     className="w-full h-80 object-cover"
                   />

@@ -56,7 +56,7 @@ const Hero = () => {
             {/* Main Image Container */}
             <div className="relative bg-white/90 backdrop-blur-sm p-4 rounded-2xl shadow-xl max-w-md mx-auto">
               <img
-                src="/src/images/internship.jpeg"
+                src="/src/images/Internship.jpeg"
                 alt="internships image"
                 className="rounded-l w-full object-cover h-84 sm:h-80 shadow-lg"
               />

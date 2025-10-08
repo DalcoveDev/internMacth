@@ -7,7 +7,7 @@ const Footer = () => {
       {/* Background Image */}
       <div 
         className="absolute inset-0 bg-cover bg-center bg-no-repeat opacity-10"
-        style={{ backgroundImage: `url('/images/Paper art and digital craft style of landscape with green eco urban city, earth day and world environment day concept_ _ Premium Vector.jpeg')` }}
+        style={{ backgroundImage: `url('/src/images/Daily 3D renders — abstract cloth edition.jpeg')` }}
       ></div>
       <div className="max-w-7xl mx-auto py-8 px-4 sm:px-6 lg:px-8 relative z-10">
         <div className="grid grid-cols-1 md:grid-cols-3 gap-8">

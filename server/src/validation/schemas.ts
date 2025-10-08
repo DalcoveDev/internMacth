@@ -17,7 +17,7 @@ export const loginSchema = z.object({
   password: z.string().min(1, 'Password is required'),
   role: z.enum(['student', 'company', 'admin'], {
     errorMap: () => ({ message: 'Role must be student, company, or admin' })
-  })
+  }).optional()
 })
 
 // User schemas

@@ -111,6 +111,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         localStorage.setItem('user', JSON.stringify(simulatedUser));
         localStorage.setItem('token', 'demo_token_' + Date.now());
         setUser(simulatedUser);
+        setError('Backend not available. You are in demo mode.');
       } else {
         setError('Invalid email or password. Please try again.');
         throw error;
@@ -156,6 +157,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         localStorage.setItem('user', JSON.stringify(simulatedUser));
         localStorage.setItem('token', 'demo_token_' + Date.now());
         setUser(simulatedUser);
+        setError('Backend not available. You are in demo mode.');
       } else if (error.message?.includes('409') || error.message?.includes('already exists')) {
         setError('An account with this email already exists. Please login instead.');
         throw error;

@@ -15,7 +15,19 @@ async function request(path: string, opts?: RequestInit) {
     headers
   })
   
-  if (!res.ok) throw new Error(`Request failed ${res.status}`)
+  if (!res.ok) {
+    // Try to get error message from response
+    let errorMessage = `Request failed ${res.status}`;
+    try {
+      const errorData = await res.json();
+      if (errorData.message) {
+        errorMessage = errorData.message;
+      }
+    } catch (e) {
+      // If we can't parse the error response, use the status code
+    }
+    throw new Error(errorMessage);
+  }
   return res.json()
 }
 
