@@ -1,7 +1,20 @@
-const API_BASE = (import.meta as any).env?.VITE_API_URL ?? 'http://localhost:4000/api'
+const API_BASE = import.meta.env.VITE_API_URL ?? 'http://localhost:4001/api'
 
 async function request(path: string, opts?: RequestInit) {
-  const res = await fetch(`${API_BASE}${path}`, opts)
+  // Get token from localStorage
+  const token = localStorage.getItem('token')
+  
+  // Add authorization header if token exists
+  const headers = {
+    ...(opts?.headers || {}),
+    ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+  }
+  
+  const res = await fetch(`${API_BASE}${path}`, {
+    ...opts,
+    headers
+  })
+  
   if (!res.ok) throw new Error(`Request failed ${res.status}`)
   return res.json()
 }

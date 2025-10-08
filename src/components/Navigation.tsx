@@ -1,15 +1,15 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Menu, X, User, LogOut, Briefcase, Shield } from 'lucide-react';
-import { useConfirm } from './ConfirmDialog';
 import { useAuth } from '../contexts/AuthContext';
+import { useConfirm } from './ConfirmDialog';
 
 const Navigation = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
   const navigate = useNavigate();
-  const { confirm } = useConfirm();
   const { user, logout } = useAuth();
+  const { confirm } = useConfirm();
 
 
 
@@ -82,11 +82,25 @@ const Navigation = () => {
               Home
             </Link>
             <Link 
-              to="/search" 
+              to="/about" 
               className="px-4 py-2 rounded-md text-sm font-medium text-gray-700 hover:text-emerald-700 hover:underline decoration-emerald-400 underline-offset-4 transition-colors"
             >
-              Find Internships
+              About
             </Link>
+            <Link 
+              to="/services" 
+              className="px-4 py-2 rounded-md text-sm font-medium text-gray-700 hover:text-emerald-700 hover:underline decoration-emerald-400 underline-offset-4 transition-colors"
+            >
+              Services
+            </Link>
+            {(!user || user.role === 'student') && (
+              <Link 
+                to="/search" 
+                className="px-4 py-2 rounded-md text-sm font-medium text-gray-700 hover:text-emerald-700 hover:underline decoration-emerald-400 underline-offset-4 transition-colors"
+              >
+                Find Internships
+              </Link>
+            )}
             
             {user && (user as { role: string }).role === 'company' && (
               <Link 
@@ -239,12 +253,28 @@ const Navigation = () => {
               Home
             </Link>
             <Link
-              to="/search"
+              to="/about"
               className="block px-3 py-2 rounded-md text-base font-medium text-gray-700 hover:text-emerald-700 hover:bg-emerald-50 transition-colors"
               onClick={() => setIsMenuOpen(false)}
             >
-              Find Internships
+              About
             </Link>
+            <Link
+              to="/services"
+              className="block px-3 py-2 rounded-md text-base font-medium text-gray-700 hover:text-emerald-700 hover:bg-emerald-50 transition-colors"
+              onClick={() => setIsMenuOpen(false)}
+            >
+              Services
+            </Link>
+            {(!user || user.role === 'student') && (
+              <Link
+                to="/search"
+                className="block px-3 py-2 rounded-md text-base font-medium text-gray-700 hover:text-emerald-700 hover:bg-emerald-50 transition-colors"
+                onClick={() => setIsMenuOpen(false)}
+              >
+                Find Internships
+              </Link>
+            )}
             
             {user && (user as { role: string }).role === 'company' && (
               <Link

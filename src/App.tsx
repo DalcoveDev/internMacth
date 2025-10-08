@@ -2,7 +2,9 @@ import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import { AuthProvider } from './contexts/AuthContext';
 import { NotificationProvider } from './contexts/NotificationContext';
 import Home from './pages/Home';
-import Search from './pages/Search';
+import About from './pages/About';
+import Services from './pages/Services';
+import Search from './pages/Search.tsx';
 import PostInternship from './pages/PostInternship';
 import Navigation from './components/Navigation';
 import Footer from './components/Footer';
@@ -17,6 +19,7 @@ import ApplicationForm from './pages/ApplicationForm';
 import InternshipApproval from './pages/InternshipApproval';
 import { ToastProvider } from './components/ToastProvider';
 import { ConfirmProvider } from './components/ConfirmDialog';
+
 export function App() {
   return (
     <AuthProvider>
@@ -29,7 +32,13 @@ export function App() {
           <main className="flex-grow">
             <Routes>
               <Route path="/" element={<Home />} />
-              <Route path="/search" element={<Search />} />
+              <Route path="/about" element={<About />} />
+              <Route path="/services" element={<Services />} />
+              <Route path="/search" element={
+                <ProtectedRoute allowedRoles={['student']} allowGuest={true}>
+                  <Search />
+                </ProtectedRoute>
+              } />
               <Route path="/login" element={<Login />} />
               <Route path="/signup" element={<Signup />} />
               {/* Application Form Route */}

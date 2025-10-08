@@ -1,6 +1,5 @@
-import React, { createContext, useContext, ReactNode } from 'react';
+import React, { createContext, ReactNode } from 'react';
 import { useRealtimeNotifications } from '../hooks/useRealtimeData';
-import { useAuth } from './AuthContext';
 
 // Notification interface
 export interface Notification {
@@ -16,7 +15,7 @@ export interface Notification {
 }
 
 // Notification context interface
-interface NotificationContextType {
+export interface NotificationContextType {
   notifications: Notification[];
   unreadCount: number;
   markAsRead: (id: number) => void;
@@ -26,25 +25,15 @@ interface NotificationContextType {
   removeNotification: (id: number) => void;
 }
 
-// Create context
-const NotificationContext = createContext<NotificationContextType | undefined>(undefined);
-
-// Custom hook to use notification context
-export const useNotifications = () => {
-  const context = useContext(NotificationContext);
-  if (context === undefined) {
-    throw new Error('useNotifications must be used within a NotificationProvider');
-  }
-  return context;
-};
+// Create context - exported for use in the hook
+export const NotificationContext = createContext<NotificationContextType | undefined>(undefined);
 
 // Notification provider component
 interface NotificationProviderProps {
   children: ReactNode;
 }
 
-export const NotificationProvider: React.FC<NotificationProviderProps> = ({ children }) => {
-  const { user } = useAuth();
+const NotificationProvider: React.FC<NotificationProviderProps> = ({ children }) => {
   const {
     notifications,
     unreadCount,
@@ -72,39 +61,9 @@ export const NotificationProvider: React.FC<NotificationProviderProps> = ({ chil
     console.log('Remove notification:', id);
   };
 
-  // Enhanced notifications based on user role and actions
-  const enhancedNotifications = notifications.map(notification => {
-    // Add role-specific metadata
-    if (user) {
-      switch (user.role) {
-        case 'student':
-          if (notification.type === 'application_update') {
-            return {
-              ...notification,
-              priority: 'high' as const,
-              actionUrl: '/student-dashboard'
-            };
-          }
-          break;
-        case 'company':
-          if (notification.type === 'new_internship') {
-            return {
-              ...notification,
-              priority: 'medium' as const,
-              actionUrl: '/company-dashboard'
-            };
-          }
-          break;
-        case 'admin':
-          return {
-            ...notification,
-            priority: 'high' as const,
-            actionUrl: '/admin-dashboard'
-          };
-      }
-    }
-    return notification;
-  });
+  // For now, we'll just pass through the notifications from useRealtimeNotifications
+  // In a real implementation, you might want to enhance them based on user role
+  const enhancedNotifications = notifications;
 
   const value: NotificationContextType = {
     notifications: enhancedNotifications,
@@ -123,4 +82,13 @@ export const NotificationProvider: React.FC<NotificationProviderProps> = ({ chil
   );
 };
 
-export default NotificationContext;
+// Custom hook to use notification context
+const useNotifications = () => {
+  const context = React.useContext(NotificationContext);
+  if (context === undefined) {
+    throw new Error('useNotifications must be used within a NotificationProvider');
+  }
+  return context;
+};
+
+export { NotificationProvider, useNotifications };

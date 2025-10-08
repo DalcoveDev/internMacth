@@ -1,8 +1,15 @@
 
 import { Link } from 'react-router-dom';
+
 const Footer = () => {
-  return <footer className="bg-gray-900 text-white">
-      <div className="max-w-7xl mx-auto py-8 px-4 sm:px-6 lg:px-8">
+  return (
+    <footer className="bg-gray-900 text-white relative overflow-hidden">
+      {/* Background Image */}
+      <div 
+        className="absolute inset-0 bg-cover bg-center bg-no-repeat opacity-10"
+        style={{ backgroundImage: `url('/images/Paper art and digital craft style of landscape with green eco urban city, earth day and world environment day concept_ _ Premium Vector.jpeg')` }}
+      ></div>
+      <div className="max-w-7xl mx-auto py-8 px-4 sm:px-6 lg:px-8 relative z-10">
         <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
           <div>
             <h3 className="text-lg font-semibold mb-4">InternMatch</h3>
@@ -43,6 +50,7 @@ const Footer = () => {
           </p>
         </div>
       </div>
-    </footer>;
+    </footer>
+  );
 };
 export default Footer;
