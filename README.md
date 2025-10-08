@@ -49,3 +49,24 @@ The application uses environment variables for configuration. See [server/.env.e
 For detailed API documentation, see [server/README.md](server/README.md).
 
 The server will run on port 4001 (configured in server/.env) and expose endpoints under `/api`.
+
+## Deployment
+
+For deployment instructions, please see:
+- [DEPLOYMENT_CHECKLIST.md](DEPLOYMENT_CHECKLIST.md) - Complete deployment checklist
+- [DEPLOYMENT_PREP.md](DEPLOYMENT_PREP.md) - Preparation guide for deployment
+- [DEPLOYMENT_VERIFY.md](DEPLOYMENT_VERIFY.md) - Post-deployment verification guide
+
+### Quick Deployment Steps
+
+1. Update environment variables in both `.env` files for production
+2. Build both frontend and backend applications
+3. Deploy the built applications to your hosting environment
+4. Verify all functionality with the deployment verification guide
+
+### Production Considerations
+
+- Ensure HTTPS is configured for security
+- Set up proper database backups
+- Configure monitoring and alerting
+- Test failover and recovery procedures

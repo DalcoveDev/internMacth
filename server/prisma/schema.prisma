@@ -8,71 +8,157 @@ datasource db {
 }
 
 model User {
-  id        Int      @id @default(autoincrement())
-  email     String   @unique
-  password  String
-  name      String?
-  role      String   @default("student")
-  createdAt DateTime @default(now())
-  internships Internship[] @relation("PostedBy")
+  id                 Int                  @id @default(autoincrement())
+  email              String               @unique
+  password           String
+  name               String?
+  role               String               @default("student")
+  status             String               @default("active")
+  lastLogin          DateTime?
+  createdAt          DateTime             @default(now())
+  updatedAt          DateTime?            @updatedAt
+  internships        Internship[]         @relation("PostedBy")
   // Back-relations
-  companiesOwned Company[] @relation("UserOwnsCompanies")
-  studentProfile Student?
+  companiesOwned     Company[]            @relation("UserOwnsCompanies")
+  studentProfile     Student?
+  internshipViews    InternshipView[]
+  dashboardAnalytics DashboardAnalytics[]
+  userActivities     UserActivity[]
 }
 
 model Company {
-  id          Int       @id @default(autoincrement())
+  id          Int          @id @default(autoincrement())
   name        String
   email       String?
   website     String?
   location    String?
   description String?
+  industry    String? // For company industry
+  size        String? // For company size (small, medium, large)
+  logoUrl     String? // For company logo
   ownerUserId Int?
-  ownerUser   User?     @relation("UserOwnsCompanies", fields: [ownerUserId], references: [id])
-  createdAt   DateTime  @default(now())
+  ownerUser   User?        @relation("UserOwnsCompanies", fields: [ownerUserId], references: [id])
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime?    @updatedAt
   // Relation to internships when companies are first-class entities
   internships Internship[]
 }
 
 model Student {
-  id        Int      @id @default(autoincrement())
-  userId    Int      @unique
-  user      User     @relation(fields: [userId], references: [id])
-  university String?
-  major      String?
-  resumeUrl  String?
-  createdAt  DateTime @default(now())
+  id           Int           @id @default(autoincrement())
+  userId       Int           @unique
+  user         User          @relation(fields: [userId], references: [id])
+  university   String?
+  major        String?
+  resumeUrl    String?
+  bio          String? // For student bio/description
+  website      String? // For personal website/portfolio
+  github       String? // For GitHub profile
+  linkedin     String? // For LinkedIn profile
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime?     @updatedAt
   applications Application[] @relation("StudentApplications")
 }
 
 model Internship {
-  id          Int      @id @default(autoincrement())
-  title       String
-  company     String
-  location    String?
-  description String?
-  skills      String?   // comma-separated for simplicity
-  postedById  Int
-  postedBy    User     @relation("PostedBy", fields: [postedById], references: [id])
+  id               Int                    @id @default(autoincrement())
+  title            String
+  company          String
+  location         String?
+  description      String?
+  skills           String? // comma-separated for simplicity
+  type             String?
+  duration         String?
+  postedById       Int
+  postedBy         User                   @relation("PostedBy", fields: [postedById], references: [id])
   // Optional linkage to Company
-  companyId   Int?
-  companyRef  Company? @relation(fields: [companyId], references: [id])
-  applications Application[]
-  isApproved  Boolean  @default(false)
-  createdAt   DateTime @default(now())
+  companyId        Int?
+  companyRef       Company?               @relation(fields: [companyId], references: [id])
+  applications     Application[]
+  internshipViews  InternshipView[]
+  applicationStats ApplicationStatistic[]
+  isApproved       Boolean                @default(false)
+  rejectionReason  String? // For storing rejection reasons
+  views            Int                    @default(0) // For tracking internship views
+  createdAt        DateTime               @default(now())
+  updatedAt        DateTime               @updatedAt
 }
 
 model Application {
-  id           Int      @id @default(autoincrement())
+  id           Int        @id @default(autoincrement())
   internshipId Int
   internship   Internship @relation(fields: [internshipId], references: [id])
   studentName  String
   studentEmail String
   // Optional linkage to a Student profile
   studentId    Int?
-  student      Student? @relation("StudentApplications", fields: [studentId], references: [id])
+  student      Student?   @relation("StudentApplications", fields: [studentId], references: [id])
   coverLetter  String?
   skills       String?
-  status       String   @default("pending")
+  resumeUrl    String? // For storing resume URL
+  status       String     @default("pending")
+  viewed       Boolean    @default(false) // For tracking if application has been viewed
+  updatedAt    DateTime?  @updatedAt
+  createdAt    DateTime   @default(now())
+}
+
+model DashboardAnalytics {
+  id             Int       @id @default(autoincrement())
+  userId         Int? // For user-specific analytics
+  userType       String? // student, company, admin
+  metricType     String // e.g., 'applications_over_time', 'user_activity', 'internship_performance'
+  metricData     String // JSON data for the metric
+  dateRangeStart DateTime?
+  dateRangeEnd   DateTime?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  user User? @relation(fields: [userId], references: [id])
+}
+
+model UserActivity {
+  id           Int      @id @default(autoincrement())
+  userId       Int // Reference to the user
+  action       String // e.g., 'login', 'apply', 'post_internship'
+  resourceId   Int? // ID of the resource being acted upon
+  resourceType String? // Type of resource (internship, application, etc.)
+  metadata     String? // Additional data about the action (JSON)
+  ipAddress    String? // IP address of the user
+  userAgent    String? // User agent string
   createdAt    DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id])
+}
+
+model SystemMetric {
+  id         Int      @id @default(autoincrement())
+  metricName String // e.g., 'api_response_time', 'database_connections'
+  value      Float // Numeric value of the metric
+  tags       String? // JSON object with tags (environment, region, etc.)
+  createdAt  DateTime @default(now())
+}
+
+model InternshipView {
+  id           Int      @id @default(autoincrement())
+  internshipId Int // Reference to the internship
+  userId       Int? // Reference to the user (if logged in)
+  ipAddress    String? // IP address of the viewer
+  userAgent    String? // User agent string
+  sessionId    String? // Session ID for tracking unique visitors
+  createdAt    DateTime @default(now())
+
+  internship Internship @relation(fields: [internshipId], references: [id])
+  user       User?      @relation(fields: [userId], references: [id])
+}
+
+model ApplicationStatistic {
+  id             Int      @id @default(autoincrement())
+  internshipId   Int // Reference to the internship
+  status         String // pending, approved, rejected
+  responseTime   Int? // Time from application to first response (in hours)
+  completionTime Int? // Time from application to completion (in days)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  internship Internship @relation(fields: [internshipId], references: [id])
 }

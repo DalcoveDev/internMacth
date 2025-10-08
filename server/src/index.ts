@@ -39,6 +39,7 @@ app.use(express.urlencoded({ extended: true, limit: '10mb' }))
 
 // Rate limiting
 const isDevelopment = process.env.NODE_ENV === 'development';
+console.log(`🔧 Rate Limiting: Development mode is ${isDevelopment ? 'ENABLED' : 'DISABLED'}`);
 
 const authLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
@@ -46,14 +47,20 @@ const authLimiter = rateLimit({
   message: 'Too many authentication attempts, please try again later.',
   standardHeaders: true,
   legacyHeaders: false,
-  skip: () => isDevelopment // Skip rate limiting in development
+  skip: () => {
+    console.log(`🔐 Auth Rate Limiter: Skipping in development mode: ${isDevelopment}`);
+    return isDevelopment;
+  } // Skip rate limiting in development
 })
 
 const generalLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
   max: isDevelopment ? 10000 : 1000, // Higher limit in development
   message: 'Too many requests from this IP, please try again later.',
-  skip: () => isDevelopment // Skip rate limiting in development
+  skip: () => {
+    console.log(`🌐 General Rate Limiter: Skipping in development mode: ${isDevelopment}`);
+    return isDevelopment;
+  } // Skip rate limiting in development
 })
 
 // Apply rate limiting

@@ -4,7 +4,7 @@ import { ArrowLeftIcon, MapPinIcon, CalendarIcon, ClockIcon, CheckIcon, XIcon } 
 import { getInternship, approveInternship, rejectInternship } from '../api';
 import { useToast } from '../components/ToastProvider';
 const InternshipApproval = () => {
-  const { showWarning } = useToast();
+  const { showWarning, showError } = useToast();
   const {
     id
   } = useParams();
@@ -21,7 +21,8 @@ const InternshipApproval = () => {
         companyEmail: (it.postedBy && it.postedBy.email) || ''
       } as any)
       setLoading(false)
-    }).catch(() => {
+    }).catch((error) => {
+      console.error('Error fetching internship:', error);
       setInternship(null as any)
       setLoading(false)
     })
@@ -30,7 +31,10 @@ const InternshipApproval = () => {
     approveInternship(Number(id)).then(() => {
       setInternship((prev: any) => ({ ...(prev || {}), status: 'approved' }));
       setTimeout(() => navigate('/admin-dashboard'), 1500);
-    }).catch(() => {});
+    }).catch((error) => {
+      console.error('Error approving internship:', error);
+      showError('Error', 'Failed to approve internship');
+    });
   };
   const handleReject = () => {
     if (!rejectionReason) {
@@ -40,7 +44,10 @@ const InternshipApproval = () => {
     rejectInternship(Number(id), rejectionReason).then(() => {
       setInternship((prev: any) => ({ ...(prev || {}), status: 'rejected', rejectionReason }));
       setTimeout(() => navigate('/admin-dashboard'), 1500);
-    }).catch(() => {});
+    }).catch((error) => {
+      console.error('Error rejecting internship:', error);
+      showError('Error', 'Failed to reject internship');
+    });
   };
   if (loading) {
     return (

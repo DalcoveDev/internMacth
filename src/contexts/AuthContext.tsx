@@ -97,7 +97,10 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       console.error('Login error:', error);
       
       // Handle different error scenarios
-      if (error.message?.includes('404') || error.message?.includes('Failed to fetch')) {
+      if (error.message?.includes('429')) {
+        setError('Too many requests. Please wait a moment and try again.');
+        throw error;
+      } else if (error.message?.includes('404') || error.message?.includes('Failed to fetch')) {
         // Backend not available - simulate login for demo
         const simulatedUser: User = {
           id: Date.now(),
@@ -143,7 +146,10 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       console.error('Signup error:', error);
       
       // Handle different error scenarios
-      if (error.message?.includes('404') || error.message?.includes('Failed to fetch')) {
+      if (error.message?.includes('429')) {
+        setError('Too many requests. Please wait a moment and try again.');
+        throw error;
+      } else if (error.message?.includes('404') || error.message?.includes('Failed to fetch')) {
         // Backend not available - simulate signup for demo
         const simulatedUser: User = {
           id: Date.now(),
