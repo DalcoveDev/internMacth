@@ -32,7 +32,10 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
     return <>{children}</>;
   }
 
-  if (!allowedRoles.includes(user.role)) {
+  // At this point, we know user is not null
+  const currentUser = user!;
+
+  if (!allowedRoles.includes(currentUser.role)) {
     // Show access denied message and redirect to appropriate dashboard
     return (
       <div className="flex flex-col items-center justify-center h-screen bg-gray-50">
@@ -44,11 +47,11 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
           </div>
           <h2 className="text-xl font-bold text-gray-900 mb-2">Access Denied</h2>
           <p className="text-gray-600 mb-4">
-            You don't have permission to access this page. Your role is: <span className="font-semibold text-emerald-600">{user.role}</span>
+            You don't have permission to access this page. Your role is: <span className="font-semibold text-emerald-600">{currentUser.role}</span>
           </p>
           <button
             onClick={() => {
-              switch (user.role) {
+              switch (currentUser.role) {
                 case 'student':
                   window.location.href = '/student-dashboard';
                   break;

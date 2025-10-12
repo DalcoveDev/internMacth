@@ -1,9 +1,18 @@
 import React, { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
-import { UserIcon, BriefcaseIcon, ShieldIcon, EyeIcon, EyeOffIcon } from 'lucide-react';
+import { useToast } from '@/hooks/use-toast';
+import { useTheme } from '../contexts/ThemeContext'; // Add this import
+import { EyeIcon, EyeOffIcon, UserIcon, BuildingIcon } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 
 const Signup = () => {
+  const { effectiveTheme } = useTheme(); // Get the current theme
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -12,8 +21,10 @@ const Signup = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [localError, setLocalError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [progress, setProgress] = useState(0); // For visual progress feedback
   const navigate = useNavigate();
   const { user, signup, error, clearError } = useAuth();
+  const { toast } = useToast();
   
   // Check if user is already logged in
   useEffect(() => {
@@ -31,34 +42,55 @@ const Signup = () => {
     clearError(); // Clear previous errors
     setLocalError(''); // Clear local errors
     setIsLoading(true);
+    setProgress(0);
     
     // Enhanced validation
     if (!name?.trim() || !email?.trim() || !password) {
-      setLocalError('Please fill all required fields');
+      toast({
+        title: "Missing Information",
+        description: "Please fill in all required fields",
+        variant: "destructive",
+      });
       setIsLoading(false);
       return;
     }
     
     if (name.trim().length < 2) {
-      setLocalError('Name must be at least 2 characters long');
+      toast({
+        title: "Invalid Name",
+        description: "Name must be at least 2 characters long",
+        variant: "destructive",
+      });
       setIsLoading(false);
       return;
     }
     
     if (!email.includes('@') || !email.includes('.')) {
-      setLocalError('Please enter a valid email address');
+      toast({
+        title: "Invalid Email",
+        description: "Please enter a valid email address",
+        variant: "destructive",
+      });
       setIsLoading(false);
       return;
     }
     
     if (password.length < 8) {
-      setLocalError('Password must be at least 8 characters long');
+      toast({
+        title: "Weak Password",
+        description: "Password must be at least 8 characters long",
+        variant: "destructive",
+      });
       setIsLoading(false);
       return;
     }
     
     if (password !== confirmPassword) {
-      setLocalError('Passwords do not match');
+      toast({
+        title: "Password Mismatch",
+        description: "Passwords do not match",
+        variant: "destructive",
+      });
       setIsLoading(false);
       return;
     }
@@ -67,13 +99,36 @@ const Signup = () => {
     const hasNumber = /\d/.test(password);
     const hasLetter = /[a-zA-Z]/.test(password);
     if (!hasNumber || !hasLetter) {
-      setLocalError('Password must contain both letters and numbers');
+      toast({
+        title: "Weak Password",
+        description: "Password must contain both letters and numbers",
+        variant: "destructive",
+      });
       setIsLoading(false);
       return;
     }
     
     try {
+      // Simulate progress for better UX
+      const progressInterval = setInterval(() => {
+        setProgress(prev => {
+          if (prev >= 90) {
+            clearInterval(progressInterval);
+            return prev;
+          }
+          return prev + 10;
+        });
+      }, 300);
+      
       await signup({ name: name.trim(), email: email.trim().toLowerCase(), password, role });
+      
+      clearInterval(progressInterval);
+      setProgress(100);
+      
+      toast({
+        title: "Account Created",
+        description: "Your account has been successfully created!",
+      });
       
       // Navigate based on role after successful signup
       if (role === 'student') navigate('/student-dashboard');
@@ -82,215 +137,263 @@ const Signup = () => {
       else navigate('/');
       
     } catch (error) {
-      // Error is handled by AuthContext
+      toast({
+        title: "Signup Failed",
+        description: "Failed to create account. Please try again.",
+        variant: "destructive",
+      });
       console.error('Signup failed:', error);
     } finally {
       setIsLoading(false);
     }
   };
 
-  const [mounted, setMounted] = useState(false);
-
-  useEffect(() => {
-    const t = setTimeout(() => setMounted(true), 10);
-    return () => clearTimeout(t);
-  }, []);
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-emerald-50 to-green-100 relative overflow-hidden">
-      {/* Background Image */}
+    // Use theme-aware background classes
+    <div className={`min-h-screen relative overflow-hidden ${effectiveTheme === 'dark' ? 'bg-background' : 'bg-gradient-to-br from-emerald-50 to-green-100'}`}>
+      {/* Background Image with theme-aware opacity */}
       <div 
         className="absolute inset-0 bg-cover bg-center bg-no-repeat opacity-10"
         style={{ backgroundImage: `url('/images/Download Abstract green papercut style layers background for free.jpeg')` }}
       ></div>
       
       <div className="flex items-center justify-center min-h-screen py-8 px-4 sm:px-6 lg:px-8 relative z-10">
-        <div className="flex items-center space-x-6 max-w-4xl w-full">
+        <div className="flex items-start space-x-6 max-w-6xl w-full">
+          {/* Benefits Panel */}
+          {(role === 'student' || role === 'company') && (
+            <Card className={`w-80 hidden lg:block backdrop-blur-sm ${effectiveTheme === 'dark' ? 'bg-background/30 border border-border' : 'bg-white/30 border border-white/50'} relative overflow-hidden`}>
+              <div 
+                className="absolute inset-0 bg-cover bg-center bg-no-repeat opacity-5"
+                style={{ backgroundImage: `url('/images/Download Abstract green papercut style layers background for free.jpeg')` }}
+              ></div>
+              <div className="relative z-10">
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    {role === 'student' ? <UserIcon className="h-5 w-5" /> : <BuildingIcon className="h-5 w-5" />}
+                    {role === 'student' ? 'Student Benefits' : 'Company Benefits'}
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <ul className="space-y-4">
+                    {role === 'student' ? (
+                      <>
+                        <li className="flex items-start">
+                          <div className={`flex-shrink-0 h-5 w-5 ${effectiveTheme === 'dark' ? 'text-primary' : 'text-emerald-600'} mt-0.5`}>•</div>
+                          <p className={`ml-2 text-sm ${effectiveTheme === 'dark' ? 'text-foreground' : 'text-gray-700'}`}>Access to thousands of internships from top companies</p>
+                        </li>
+                        <li className="flex items-start">
+                          <div className={`flex-shrink-0 h-5 w-5 ${effectiveTheme === 'dark' ? 'text-primary' : 'text-emerald-600'} mt-0.5`}>•</div>
+                          <p className={`ml-2 text-sm ${effectiveTheme === 'dark' ? 'text-foreground' : 'text-gray-700'}`}>Personalized internship recommendations based on your interests</p>
+                        </li>
+                        <li className="flex items-start">
+                          <div className={`flex-shrink-0 h-5 w-5 ${effectiveTheme === 'dark' ? 'text-primary' : 'text-emerald-600'} mt-0.5`}>•</div>
+                          <p className={`ml-2 text-sm ${effectiveTheme === 'dark' ? 'text-foreground' : 'text-gray-700'}`}>Build your professional portfolio with real projects</p>
+                        </li>
+                        <li className="flex items-start">
+                          <div className={`flex-shrink-0 h-5 w-5 ${effectiveTheme === 'dark' ? 'text-primary' : 'text-emerald-600'} mt-0.5`}>•</div>
+                          <p className={`ml-2 text-sm ${effectiveTheme === 'dark' ? 'text-foreground' : 'text-gray-700'}`}>Connect with industry mentors and professionals</p>
+                        </li>
+                        <li className="flex items-start">
+                          <div className={`flex-shrink-0 h-5 w-5 ${effectiveTheme === 'dark' ? 'text-primary' : 'text-emerald-600'} mt-0.5`}>•</div>
+                          <p className={`ml-2 text-sm ${effectiveTheme === 'dark' ? 'text-foreground' : 'text-gray-700'}`}>Track your applications and receive feedback</p>
+                        </li>
+                      </>
+                    ) : (
+                      <>
+                        <li className="flex items-start">
+                          <div className={`flex-shrink-0 h-5 w-5 ${effectiveTheme === 'dark' ? 'text-primary' : 'text-emerald-600'} mt-0.5`}>•</div>
+                          <p className={`ml-2 text-sm ${effectiveTheme === 'dark' ? 'text-foreground' : 'text-gray-700'}`}>Post internships and find talented students quickly</p>
+                        </li>
+                        <li className="flex items-start">
+                          <div className={`flex-shrink-0 h-5 w-5 ${effectiveTheme === 'dark' ? 'text-primary' : 'text-emerald-600'} mt-0.5`}>•</div>
+                          <p className={`ml-2 text-sm ${effectiveTheme === 'dark' ? 'text-foreground' : 'text-gray-700'}`}>Access to a pool of pre-vetted candidates</p>
+                        </li>
+                        <li className="flex items-start">
+                          <div className={`flex-shrink-0 h-5 w-5 ${effectiveTheme === 'dark' ? 'text-primary' : 'text-emerald-600'} mt-0.5`}>•</div>
+                          <p className={`ml-2 text-sm ${effectiveTheme === 'dark' ? 'text-foreground' : 'text-gray-700'}`}>Streamline your hiring process with our tools</p>
+                        </li>
+                        <li className="flex items-start">
+                          <div className={`flex-shrink-0 h-5 w-5 ${effectiveTheme === 'dark' ? 'text-primary' : 'text-emerald-600'} mt-0.5`}>•</div>
+                          <p className={`ml-2 text-sm ${effectiveTheme === 'dark' ? 'text-foreground' : 'text-gray-700'}`}>Build your employer brand with student community</p>
+                        </li>
+                        <li className="flex items-start">
+                          <div className={`flex-shrink-0 h-5 w-5 ${effectiveTheme === 'dark' ? 'text-primary' : 'text-emerald-600'} mt-0.5`}>•</div>
+                          <p className={`ml-2 text-sm ${effectiveTheme === 'dark' ? 'text-foreground' : 'text-gray-700'}`}>Manage all internship postings in one dashboard</p>
+                        </li>
+                      </>
+                    )}
+                  </ul>
+                </CardContent>
+              </div>
+            </Card>
+          )}
+
           {/* Main Form */}
-          <div className={`bg-white rounded-xl shadow-sm hover:shadow-md transition-shadow duration-300 p-6 sm:p-8 lg:p-10 border border-gray-100 flex-1 ${mounted ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-2'} motion-reduce:transition-none motion-reduce:opacity-100 motion-reduce:translate-y-0`}>
-            {/* Header */}
-            <div className="text-center mb-4">
-              <h2 className="text-lg sm:text-xl font-bold text-gray-900">Create Account</h2>
-              <p className="mt-1 text-xs text-gray-600">Join InternMatch today</p>
-            </div>
-
-            <div className="mb-3">
-              <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-emerald-50 text-emerald-700 border border-emerald-200">
-                {role}
-              </span>
-            </div>
-
-            {(error || localError) && (
-              <div className="bg-red-50 border-l-4 border-red-500 p-3 mb-3">
-                <p className="text-xs text-red-700">{error || localError}</p>
-              </div>
-            )}
-
-            <form onSubmit={handleSignup} className="space-y-3">
+          <Card className={`shadow-sm hover:shadow-md transition-shadow duration-300 flex-1 backdrop-blur-sm ${effectiveTheme === 'dark' ? 'bg-background/30 border border-border' : 'bg-white/30 border border-white/50'}`}>
+            <CardHeader className="text-center">
+              <CardTitle className="text-xl">Create Account</CardTitle>
+              <CardDescription>Join InternMatch today</CardDescription>
+            </CardHeader>
+            <CardContent>
               <div className="mb-3">
-                <label className="block text-gray-700 text-sm font-medium mb-2">
-                  Role:
-                </label>
-                <div className="grid grid-cols-3 gap-2">
-                  <button type="button" onClick={() => setRole('student')} className={`flex flex-col items-center justify-center p-2 rounded-lg border transition-all duration-200 ${role === 'student' ? 'bg-emerald-50 border-emerald-500' : 'border-gray-200 hover:border-gray-300'}`}>
-                    <UserIcon size={14} className={`${role === 'student' ? 'text-emerald-600' : 'text-gray-500'}`} />
-                    <span className={`mt-1 text-xs font-medium ${role === 'student' ? 'text-emerald-700' : 'text-gray-700'}`}>
-                      Student
-                    </span>
-                  </button>
-                  <button type="button" onClick={() => setRole('company')} className={`flex flex-col items-center justify-center p-2 rounded-lg border transition-all duration-200 ${role === 'company' ? 'bg-emerald-50 border-emerald-500' : 'border-gray-200 hover:border-gray-300'}`}>
-                    <BriefcaseIcon size={14} className={`${role === 'company' ? 'text-emerald-600' : 'text-gray-500'}`} />
-                    <span className={`mt-1 text-xs font-medium ${role === 'company' ? 'text-emerald-700' : 'text-gray-700'}`}>
-                      Company
-                    </span>
-                  </button>
-                  <button type="button" onClick={() => setRole('admin')} className={`flex flex-col items-center justify-center p-2 rounded-lg border transition-all duration-200 ${role === 'admin' ? 'bg-emerald-50 border-emerald-500' : 'border-gray-200 hover:border-gray-300'}`}>
-                    <ShieldIcon size={14} className={`${role === 'admin' ? 'text-emerald-600' : 'text-gray-500'}`} />
-                    <span className={`mt-1 text-xs font-medium ${role === 'admin' ? 'text-emerald-700' : 'text-gray-700'}`}>
-                      Admin
-                    </span>
-                  </button>
+                <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${effectiveTheme === 'dark' ? 'bg-muted text-foreground border border-border' : 'bg-emerald-50 text-emerald-700 border border-emerald-200'}`}>
+                  {role}
+                </span>
+              </div>
+
+              {(error || localError) && (
+                <Alert variant="destructive" className="mb-3">
+                  <AlertTitle>Error</AlertTitle>
+                  <AlertDescription>{error || localError}</AlertDescription>
+                </Alert>
+              )}
+
+              <form onSubmit={handleSignup} className="space-y-3">
+                <div className="mb-3">
+                  <Label className="block text-sm font-medium mb-2" htmlFor="role">
+                    Role:
+                  </Label>
+                  <select
+                    id="role"
+                    value={role}
+                    onChange={(e) => setRole(e.target.value)}
+                    className={`w-full p-2 rounded-md focus:outline-none focus:ring-2 ${effectiveTheme === 'dark' ? 'bg-background border border-border text-foreground focus:ring-primary focus:border-primary' : 'border border-gray-300 text-gray-700 focus:ring-emerald-500 focus:border-emerald-500'}`}
+                  >
+                    <option value="student">Student</option>
+                    <option value="company">Company</option>
+                    <option value="admin">Admin</option>
+                  </select>
                 </div>
-              </div>
 
-              <div>
-                <label htmlFor="name" className="block text-gray-700 text-sm font-medium mb-1">
-                  {role === 'company' ? 'Company Name' : 'Full Name'}
-                </label>
-                <input 
-                  type="text" 
-                  id="name" 
-                  className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500" 
-                  placeholder={role === 'company' ? 'Acme Corp' : 'John Doe'} 
-                  value={name} 
-                  onChange={e => setName(e.target.value)} 
-                  required 
-                />
-              </div>
-
-              <div>
-                <label htmlFor="email" className="block text-gray-700 text-sm font-medium mb-1">
-                  Email
-                </label>
-                <input 
-                  type="email" 
-                  id="email" 
-                  className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500" 
-                  placeholder="you@example.com" 
-                  value={email} 
-                  onChange={e => setEmail(e.target.value)} 
-                  required 
-                />
-              </div>
-
-              <div>
-                <label htmlFor="password" className="block text-gray-700 text-sm font-medium mb-1">
-                  Password
-                </label>
-                <div className="relative">
-                  <input 
-                    type={showPassword ? 'text' : 'password'} 
-                    id="password" 
-                    className="w-full px-3 py-2 pr-10 text-sm border border-gray-200 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500" 
-                    placeholder="••••••••" 
-                    value={password} 
-                    onChange={e => setPassword(e.target.value)} 
+                <div>
+                  <Label htmlFor="name" className="block text-sm font-medium mb-1">
+                    {role === 'company' ? 'Company Name' : 'Full Name'}
+                  </Label>
+                  <Input 
+                    type="text" 
+                    id="name" 
+                    placeholder={role === 'company' ? 'Acme Corp' : 'John Doe'} 
+                    value={name} 
+                    onChange={e => setName(e.target.value)} 
                     required 
+                    className={effectiveTheme === 'dark' ? 'bg-background border border-border text-foreground' : ''}
                   />
-                  <button type="button" className="absolute inset-y-0 right-0 pr-3 flex items-center" onClick={() => setShowPassword(!showPassword)}>
-                    {showPassword ? <EyeOffIcon className="h-4 w-4 text-gray-500" /> : <EyeIcon className="h-4 w-4 text-gray-500" />}
-                  </button>
                 </div>
-              </div>
 
-              <div>
-                <label htmlFor="confirmPassword" className="block text-gray-700 text-sm font-medium mb-1">
-                  Confirm Password
-                </label>
-                <input 
-                  type={showPassword ? 'text' : 'password'} 
-                  id="confirmPassword" 
-                  className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500" 
-                  placeholder="••••••••" 
-                  value={confirmPassword} 
-                  onChange={e => setConfirmPassword(e.target.value)} 
-                  required 
-                />
-              </div>
-
-              <div className="mb-3">
-                <div className="flex items-center">
-                  <input id="terms" type="checkbox" className="h-3 w-3 text-emerald-600 border-gray-300 rounded" required />
-                  <label htmlFor="terms" className="ml-2 text-xs text-gray-700">
-                    I agree to the{' '}
-                    <a href="#" className="text-emerald-600 hover:text-emerald-700">
-                      Terms
-                    </a>{' '}
-                    and{' '}
-                    <a href="#" className="text-emerald-600 hover:text-emerald-700">
-                      Privacy Policy
-                    </a>
-                  </label>
+                <div>
+                  <Label htmlFor="email" className="block text-sm font-medium mb-1">
+                    Email
+                  </Label>
+                  <Input 
+                    type="email" 
+                    id="email" 
+                    placeholder="you@example.com" 
+                    value={email} 
+                    onChange={e => setEmail(e.target.value)} 
+                    required 
+                    className={effectiveTheme === 'dark' ? 'bg-background border border-border text-foreground' : ''}
+                  />
                 </div>
-              </div>
 
-              <button 
-                type="submit" 
-                disabled={isLoading}
-                className={`w-full py-2 px-4 text-sm font-medium rounded-lg transition-all duration-200 ${
-                  isLoading 
-                    ? 'bg-gray-400 cursor-not-allowed' 
-                    : 'bg-emerald-600 hover:bg-emerald-700 text-white shadow-sm hover:shadow-md'
-                }`}
-              >
-                {isLoading ? (
-                  <div className="flex items-center justify-center">
-                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin mr-2"></div>
-                    Creating...
+                <div>
+                  <Label htmlFor="password" className="block text-sm font-medium mb-1">
+                    Password
+                  </Label>
+                  <div className="relative">
+                    <Input 
+                      type={showPassword ? 'text' : 'password'} 
+                      id="password" 
+                      placeholder="••••••••" 
+                      value={password} 
+                      onChange={e => setPassword(e.target.value)} 
+                      required 
+                      className={effectiveTheme === 'dark' ? 'bg-background border border-border text-foreground' : ''}
+                    />
+                    <Button type="button" variant="ghost" size="icon" className="absolute inset-y-0 right-0 pr-3 flex items-center" onClick={() => setShowPassword(!showPassword)}>
+                      {showPassword ? <EyeOffIcon className="h-4 w-4 text-muted-foreground" /> : <EyeIcon className="h-4 w-4 text-muted-foreground" />}
+                    </Button>
                   </div>
-                ) : (
-                  'Create Account'
+                  <p className={`mt-1 text-xs ${effectiveTheme === 'dark' ? 'text-muted-foreground' : 'text-gray-500'}`}>At least 8 characters with letters and numbers</p>
+                </div>
+
+                <div>
+                  <Label htmlFor="confirmPassword" className="block text-sm font-medium mb-1">
+                    Confirm Password
+                  </Label>
+                  <Input 
+                    type={showPassword ? 'text' : 'password'} 
+                    id="confirmPassword" 
+                    placeholder="••••••••" 
+                    value={confirmPassword} 
+                    onChange={e => setConfirmPassword(e.target.value)} 
+                    required 
+                    className={effectiveTheme === 'dark' ? 'bg-background border border-border text-foreground' : ''}
+                  />
+                </div>
+
+                <div className="mb-3">
+                  <div className="flex items-center space-x-2">
+                    <Checkbox id="terms" required />
+                    <Label htmlFor="terms" className={`text-sm ${effectiveTheme === 'dark' ? 'text-foreground' : 'text-gray-700'}`}>
+                      I agree to the{' '}
+                      <a href="#" className={effectiveTheme === 'dark' ? 'text-primary hover:text-primary/90' : 'text-emerald-600 hover:text-emerald-700'}>
+                        Terms
+                      </a>{' '}
+                      and{' '}
+                      <a href="#" className={effectiveTheme === 'dark' ? 'text-primary hover:text-primary/90' : 'text-emerald-600 hover:text-emerald-700'}>
+                        Privacy Policy
+                      </a>
+                    </Label>
+                  </div>
+                </div>
+
+                {/* Progress bar for signup process */}
+                {isLoading && (
+                  <div className="mb-3">
+                    <div className="flex justify-between text-xs mb-1">
+                      <span className={effectiveTheme === 'dark' ? 'text-muted-foreground' : 'text-gray-600'}>Creating your account...</span>
+                      <span className={effectiveTheme === 'dark' ? 'text-muted-foreground' : 'text-gray-600'}>{progress}%</span>
+                    </div>
+                    <div className={`w-full rounded-full h-2 ${effectiveTheme === 'dark' ? 'bg-muted' : 'bg-gray-200'}`}>
+                      <div 
+                        className={`h-2 rounded-full transition-all duration-300 ease-out ${effectiveTheme === 'dark' ? 'bg-primary' : 'bg-emerald-600'}`} 
+                        style={{ width: `${progress}%` }}
+                      ></div>
+                    </div>
+                    <p className={`mt-2 text-xs ${effectiveTheme === 'dark' ? 'text-muted-foreground' : 'text-gray-500'}`}>
+                      Securing your account with encryption...
+                    </p>
+                  </div>
                 )}
-              </button>
-            </form>
 
-            <div className="mt-3 text-center">
-              <p className="text-xs text-gray-600">
-                Already have an account?{' '}
-                <Link to="/login" className="text-emerald-600 hover:text-emerald-700 font-medium">
-                  Sign in
-                </Link>
-              </p>
-            </div>
-          </div>
+                <Button 
+                  type="submit" 
+                  disabled={isLoading}
+                  className="w-full"
+                >
+                  {isLoading ? (
+                    <div className="flex items-center justify-center">
+                      <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin mr-2"></div>
+                      Creating...
+                    </div>
+                  ) : (
+                    'Create Account'
+                  )}
+                </Button>
+              </form>
 
-          {/* Side Image with Motivation */}
-          <div className={`hidden md:flex flex-col items-center justify-center space-y-6 w-1/2 ${mounted ? 'opacity-100 translate-x-0' : 'opacity-0 translate-x-4'} motion-reduce:transition-none motion-reduce:opacity-100 motion-reduce:translate-x-0`}>
-            <div className="relative">
-              <img 
-                src="/images/download.jpeg" 
-                alt="Role motivation" 
-                className="h-32 w-32 object-cover rounded-full shadow-lg border-4 border-white"
-              />
-              <div className="absolute -bottom-2 -right-2 bg-emerald-500 text-white text-sm font-bold rounded-full h-8 w-8 flex items-center justify-center">
-                {role === 'student' && '🎓'}
-                {role === 'company' && '🏢'}
-                {role === 'admin' && '🔒'}
+              <div className="mt-3 text-center">
+                <p className={`text-sm ${effectiveTheme === 'dark' ? 'text-muted-foreground' : 'text-gray-600'}`}>
+                  Already have an account?{' '}
+                  <Link to="/login" className={effectiveTheme === 'dark' ? 'text-primary hover:text-primary/90 font-medium' : 'text-emerald-600 hover:text-emerald-700 font-medium'}>
+                    Sign in
+                  </Link>
+                </p>
               </div>
-            </div>
-            <div className="text-center max-w-64">
-              <p className="text-lg font-bold text-gray-800">
-                {role === 'student' && 'Dream Big, Start Here'}
-                {role === 'company' && 'Grow Your Team'}
-                {role === 'admin' && 'Lead the Way'}
-              </p>
-              <p className="text-sm text-gray-600 mt-2">
-                {role === 'student' && 'Your journey begins now with endless possibilities'}
-                {role === 'company' && 'Discover fresh talent ready to make an impact'}
-                {role === 'admin' && 'Shape the future of internship connections'}
-              </p>
-            </div>
-          </div>
+            </CardContent>
+          </Card>
+
         </div>
       </div>
     </div>

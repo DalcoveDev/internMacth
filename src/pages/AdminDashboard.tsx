@@ -1,12 +1,14 @@
 import { useEffect, useMemo, useState } from 'react';
 import { listInternships, listUsers } from '../api';
 import { Link } from 'react-router-dom';
-import { UsersIcon, BriefcaseIcon, AlertCircleIcon, CheckCircleIcon, XCircleIcon, ClockIcon, EyeIcon, CheckIcon, XIcon, Activity } from 'lucide-react';
+import { UsersIcon, BriefcaseIcon, AlertCircleIcon, CheckCircleIcon, ActivityIcon } from 'lucide-react';
 import { ResponsiveContainer, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, AreaChart, Area, BarChart, Bar, PieChart as RechartsPieChart, Pie, Cell, Legend } from 'recharts';
 import { useToast } from '../components/ToastProvider';
 import { useAuth } from '../contexts/AuthContext';
-
 import { useRealtimeData } from '../hooks/useRealtimeData';
+import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+
 interface PendingInternship {
   id: number;
   title: string;
@@ -51,7 +53,8 @@ const AdminDashboard = () => {
     refresh: refreshInternships
   } = useRealtimeData<PendingInternship[]>(
     async () => {
-      const all = await listInternships();
+      const response = await listInternships();
+      const all = response.data;
       return all.filter((i: any) => !i.isApproved).map((i: any) => ({
         id: i.id,
         title: i.title,
@@ -73,7 +76,8 @@ const AdminDashboard = () => {
     refresh: refreshUsers
   } = useRealtimeData<UserData[]>(
     async () => {
-      const usersApi = await listUsers();
+      const response = await listUsers();
+      const usersApi = response.data;
       return usersApi.map((u: any) => ({
         id: u.id,
         name: u.name ?? u.email,
@@ -238,6 +242,7 @@ const AdminDashboard = () => {
     try {
       // In a real implementation, call API to approve
       // await approveInternship(id);
+      console.log(`Approving internship with ID: ${id}`); // Use the id parameter
       await refreshInternships(); // Refresh real-time data
       showSuccess('Internship Approved', 'The internship has been approved successfully!');
     } catch (error) {
@@ -249,6 +254,7 @@ const AdminDashboard = () => {
     try {
       // In a real implementation, call API to reject
       // await rejectInternship(id);
+      console.log(`Rejecting internship with ID: ${id}`); // Use the id parameter
       await refreshInternships(); // Refresh real-time data
       showSuccess('Internship Rejected', 'The internship has been rejected.');
     } catch (error) {
@@ -297,27 +303,6 @@ const AdminDashboard = () => {
       }
     }
   };
-  const getStatusBadge = (status: string) => {
-    switch (status) {
-      case 'pending':
-        return <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">
-            <ClockIcon size={12} className="mr-1" />
-            Pending
-          </span>;
-      case 'approved':
-        return <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
-            <CheckCircleIcon size={12} className="mr-1" />
-            Approved
-          </span>;
-      case 'rejected':
-        return <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">
-            <XCircleIcon size={12} className="mr-1" />
-            Rejected
-          </span>;
-      default:
-        return null;
-    }
-  };
   const getRoleBadge = (role: string) => {
     switch (role) {
       case 'student':
@@ -336,75 +321,101 @@ const AdminDashboard = () => {
         return null;
     }
   };
-  return <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-      <div className="bg-white shadow-md rounded-lg overflow-hidden">
+  return (
+    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <div className="bg-card shadow-lg rounded-xl overflow-hidden border border-border transition-all duration-300 hover:shadow-xl">
         {/* Dashboard Header */}
-        <div className="bg-gray-900 p-6 text-white">
-          <h1 className="text-2xl font-bold">Admin Dashboard</h1>
-          <p className="mt-1">Welcome back, {(user as any)?.name}</p>
+        <div className="bg-gradient-to-r from-primary to-secondary p-6 text-primary-foreground">
+          <h1 className="text-3xl font-bold">Admin Dashboard</h1>
+          <p className="mt-2 text-primary-foreground/90">
+            Welcome back, {(user as any)?.name}
+          </p>
         </div>
         {/* Dashboard Stats */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 p-6 bg-gray-50 border-b">
-          <div className="bg-white p-4 rounded-lg shadow-sm">
-            <div className="flex items-center">
-              <div className="flex-shrink-0 bg-emerald-100 rounded-md p-3">
-                <UsersIcon size={24} className="text-emerald-600" />
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-6 p-6 bg-muted/50">
+          <Card className="border border-border shadow-sm transition-all duration-300 hover:shadow-md">
+            <CardContent className="p-5">
+              <div className="flex items-center">
+                <div className="flex-shrink-0 bg-primary/10 rounded-lg p-3">
+                  <UsersIcon size={24} className="text-primary" />
+                </div>
+                <div className="ml-4">
+                  <h3 className="text-sm font-medium text-muted-foreground">
+                    Total Users
+                  </h3>
+                  <span className="text-2xl font-bold text-foreground">
+                    {realTimeMetrics.totalUsers || 0}
+                  </span>
+                </div>
               </div>
-              <div className="ml-4">
-                <h3 className="text-sm font-medium text-gray-500">
-                  Total Users
-                </h3>
-                <span className="text-lg font-semibold text-gray-900">
-                  {users.length}
-                </span>
+            </CardContent>
+          </Card>
+          <Card className="border border-border shadow-sm transition-all duration-300 hover:shadow-md">
+            <CardContent className="p-5">
+              <div className="flex items-center">
+                <div className="flex-shrink-0 bg-primary/10 rounded-lg p-3">
+                  <BriefcaseIcon size={24} className="text-primary" />
+                </div>
+                <div className="ml-4">
+                  <h3 className="text-sm font-medium text-muted-foreground">Companies</h3>
+                  <span className="text-2xl font-bold text-foreground">
+                    {realTimeMetrics.userActivityByRole.find(r => r.role === 'Companies')?.total || 0}
+                  </span>
+                </div>
               </div>
-            </div>
-          </div>
-          <div className="bg-white p-4 rounded-lg shadow-sm">
-            <div className="flex items-center">
-              <div className="flex-shrink-0 bg-emerald-100 rounded-md p-3">
-                <BriefcaseIcon size={24} className="text-emerald-600" />
+            </CardContent>
+          </Card>
+          <Card className="border border-border shadow-sm transition-all duration-300 hover:shadow-md">
+            <CardContent className="p-5">
+              <div className="flex items-center">
+                <div className="flex-shrink-0 bg-primary/10 rounded-lg p-3">
+                  <AlertCircleIcon size={24} className="text-primary" />
+                </div>
+                <div className="ml-4">
+                  <h3 className="text-sm font-medium text-muted-foreground">
+                    Pending Approvals
+                  </h3>
+                  <span className="text-2xl font-bold text-foreground">
+                    {realTimeMetrics.pendingApprovals || 0}
+                  </span>
+                </div>
               </div>
-              <div className="ml-4">
-                <h3 className="text-sm font-medium text-gray-500">Companies</h3>
-                <span className="text-lg font-semibold text-gray-900">
-                  {users.filter(u => u.role === 'company').length}
-                </span>
+            </CardContent>
+          </Card>
+          <Card className="border border-border shadow-sm transition-all duration-300 hover:shadow-md">
+            <CardContent className="p-5">
+              <div className="flex items-center">
+                <div className="flex-shrink-0 bg-primary/10 rounded-lg p-3">
+                  <ActivityIcon size={24} className="text-primary" />
+                </div>
+                <div className="ml-4">
+                  <h3 className="text-sm font-medium text-muted-foreground">
+                    System Health
+                  </h3>
+                  <span className="text-2xl font-bold text-foreground">
+                    {realTimeMetrics.systemHealth || 0}%
+                  </span>
+                </div>
               </div>
-            </div>
-          </div>
-          <div className="bg-white p-4 rounded-lg shadow-sm">
-            <div className="flex items-center">
-              <div className="flex-shrink-0 bg-yellow-100 rounded-md p-3">
-                <AlertCircleIcon size={24} className="text-yellow-700" />
-              </div>
-              <div className="ml-4">
-                <h3 className="text-sm font-medium text-gray-500">
-                  Pending Approvals
-                </h3>
-                <span className="text-lg font-semibold text-gray-900">
-                  {pendingInternships.filter(i => i.status === 'pending').length}
-                </span>
-              </div>
-            </div>
-          </div>
+            </CardContent>
+          </Card>
         </div>
         {/* Dashboard Tabs */}
-        <div className="border-b border-gray-200">
+        <div className="border-b border-border">
           <nav className="flex -mb-px">
-            <button onClick={() => setActiveTab('dashboard')} className={`py-4 px-6 text-center border-b-2 font-medium text-sm ${activeTab === 'dashboard' ? 'border-gray-800 text-gray-900' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'}`}>
+            <button onClick={() => setActiveTab('dashboard')} className={`py-4 px-6 text-center border-b-2 font-medium text-sm transition-colors ${activeTab === 'dashboard' ? 'border-primary text-primary' : 'border-transparent text-muted-foreground hover:text-foreground hover:border-border'}`}>
               Dashboard
             </button>
-            <button onClick={() => setActiveTab('approvals')} className={`py-4 px-6 text-center border-b-2 font-medium text-sm ${activeTab === 'approvals' ? 'border-gray-800 text-gray-900' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'}`}>
+            <button onClick={() => setActiveTab('approvals')} className={`py-4 px-6 text-center border-b-2 font-medium text-sm transition-colors ${activeTab === 'approvals' ? 'border-primary text-primary' : 'border-transparent text-muted-foreground hover:text-foreground hover:border-border'}`}>
               Content Approvals
             </button>
-            <button onClick={() => setActiveTab('users')} className={`py-4 px-6 text-center border-b-2 font-medium text-sm ${activeTab === 'users' ? 'border-gray-800 text-gray-900' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'}`}>
+            <button onClick={() => setActiveTab('users')} className={`py-4 px-6 text-center border-b-2 font-medium text-sm transition-colors ${activeTab === 'users' ? 'border-primary text-primary' : 'border-transparent text-muted-foreground hover:text-foreground hover:border-border'}`}>
               User Management
             </button>
-            <button onClick={() => setActiveTab('analytics')} className={`py-4 px-6 text-center border-b-2 font-medium text-sm ${activeTab === 'analytics' ? 'border-gray-800 text-gray-900' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'}`}>
+            <button onClick={() => setActiveTab('analytics')} className={`py-4 px-6 text-center border-b-2 font-medium text-sm transition-colors ${activeTab === 'analytics' ? 'border-primary text-primary' : 'border-transparent text-muted-foreground hover:text-foreground hover:border-border'}`}>
               Analytics
             </button>
-            <button onClick={() => setActiveTab('realtime')} className={`py-4 px-6 text-center border-b-2 font-medium text-sm ${activeTab === 'realtime' ? 'border-gray-800 text-gray-900' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'}`}>
+            <button onClick={() => setActiveTab('realtime')} className={`py-4 px-6 text-center border-b-2 font-medium text-sm transition-colors ${activeTab === 'realtime' ? 'border-primary text-primary' : 'border-transparent text-muted-foreground hover:text-foreground hover:border-border'}`}>
               Real-time Dashboard
             </button>
           </nav>
@@ -412,387 +423,573 @@ const AdminDashboard = () => {
         {/* Dashboard Content */}
         <div className="p-6">
           {activeTab === 'dashboard' && <div>
-              <h2 className="text-lg font-medium text-gray-900 mb-6">
-                System Overview
-              </h2>
-              <div className="mb-8">
-                <h3 className="text-md font-medium text-gray-800 mb-3">
-                  Recent Activity
-                </h3>
-                <div className="bg-gray-50 rounded-lg p-4 space-y-4">
-                  <div className="flex items-start">
-                    <div className="flex-shrink-0 bg-emerald-100 rounded-full p-2">
-                      <UsersIcon size={16} className="text-emerald-600" />
-                    </div>
-                    <div className="ml-3">
-                      <p className="text-sm text-gray-800">
-                        New student registered:{' '}
-                        <span className="font-medium">Jamie Smith</span>
-                      </p>
-                      <p className="text-xs text-gray-500">2 hours ago</p>
-                    </div>
-                  </div>
-                  <div className="flex items-start">
-                    <div className="flex-shrink-0 bg-emerald-100 rounded-full p-2">
-                      <BriefcaseIcon size={16} className="text-emerald-600" />
-                    </div>
-                    <div className="ml-3">
-                      <p className="text-sm text-gray-800">
-                        New internship posted:{' '}
-                        <span className="font-medium">
-                          Frontend Developer Intern
-                        </span>
-                      </p>
-                      <p className="text-xs text-gray-500">5 hours ago</p>
-                    </div>
-                  </div>
-                  <div className="flex items-start">
-                    <div className="flex-shrink-0 bg-green-100 rounded-full p-2">
-                      <CheckCircleIcon size={16} className="text-green-600" />
-                    </div>
-                    <div className="ml-3">
-                      <p className="text-sm text-gray-800">
-                        Internship approved:{' '}
-                        <span className="font-medium">UX/UI Design Intern</span>
-                      </p>
-                      <p className="text-xs text-gray-500">1 day ago</p>
-                    </div>
-                  </div>
-                </div>
-              </div>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div>
-                  <h3 className="text-md font-medium text-gray-800 mb-3">
-                    Pending Approvals
+                <h2 className="text-lg font-medium text-foreground mb-6">
+                  System Overview
+                </h2>
+                <div className="mb-8">
+                  <h3 className="text-md font-medium text-foreground mb-3">
+                    Recent Activity
                   </h3>
-                  <div className="bg-gray-50 rounded-lg p-4">
-                    {pendingInternships.filter(i => i.status === 'pending').length > 0 ? <div className="space-y-3">
-                        {pendingInternships.filter(i => i.status === 'pending').slice(0, 3).map(internship => <div key={internship.id} className="flex justify-between items-center bg-white p-3 rounded-md shadow-sm">
-                              <div>
-                                <p className="text-sm font-medium text-gray-800">
-                                  {internship.title}
-                                </p>
-                                <p className="text-xs text-gray-500">
-                                  {internship.company} •{' '}
-                                  {new Date(internship.postedDate).toLocaleDateString()}
-                                </p>
-                              </div>
-                              <Link to={`/internship-approval/${internship.id}`} className="text-emerald-600 hover:text-emerald-800 text-sm">
-                                Review
-                              </Link>
-                            </div>)}
-                        {pendingInternships.filter(i => i.status === 'pending').length > 3 && <div className="text-center mt-2">
-                            <button onClick={() => setActiveTab('approvals')} className="text-sm text-emerald-600 hover:text-emerald-800">
-                              View all pending approvals
-                            </button>
-                          </div>}
-                      </div> : <p className="text-sm text-gray-500 text-center py-4">
-                        No pending approvals
-                      </p>}
-                  </div>
-                </div>
-                <div>
-                  <h3 className="text-md font-medium text-gray-800 mb-3">
-                    User Statistics
-                  </h3>
-                  <div className="bg-gray-50 rounded-lg p-4">
-                    <div className="space-y-3">
-                      <div className="flex justify-between items-center">
-                        <span className="text-sm text-gray-600">
-                          Total Students:
-                        </span>
-                        <span className="text-sm font-medium text-gray-800">
-                          {users.filter(u => u.role === 'student').length}
-                        </span>
+                  <div className="bg-muted rounded-lg p-4 space-y-4">
+                    <div className="flex items-start">
+                      <div className="flex-shrink-0 bg-primary/10 rounded-full p-2">
+                        <UsersIcon size={16} className="text-primary" />
                       </div>
-                      <div className="flex justify-between items-center">
-                        <span className="text-sm text-gray-600">
-                          Total Companies:
-                        </span>
-                        <span className="text-sm font-medium text-gray-800">
-                          {users.filter(u => u.role === 'company').length}
-                        </span>
+                      <div className="ml-3">
+                        <p className="text-sm text-foreground">
+                          New student registered:{' '}
+                          <span className="font-medium">Jamie Smith</span>
+                        </p>
+                        <p className="text-xs text-muted-foreground">2 hours ago</p>
                       </div>
-                      <div className="flex justify-between items-center">
-                        <span className="text-sm text-gray-600">
-                          Total Admins:
-                        </span>
-                        <span className="text-sm font-medium text-gray-800">
-                          {users.filter(u => u.role === 'admin').length}
-                        </span>
+                    </div>
+                    <div className="flex items-start">
+                      <div className="flex-shrink-0 bg-primary/10 rounded-full p-2">
+                        <BriefcaseIcon size={16} className="text-primary" />
                       </div>
-                      <div className="flex justify-between items-center">
-                        <span className="text-sm text-gray-600">
-                          New Users (Last 7 Days):
-                        </span>
-                        <span className="text-sm font-medium text-gray-800">
-                          3
-                        </span>
+                      <div className="ml-3">
+                        <p className="text-sm text-foreground">
+                          New internship posted:{' '}
+                          <span className="font-medium">
+                            Frontend Developer Intern
+                          </span>
+                        </p>
+                        <p className="text-xs text-muted-foreground">5 hours ago</p>
                       </div>
-                      <div className="flex justify-between items-center">
-                        <span className="text-sm text-gray-600">
-                          Active Users:
-                        </span>
-                        <span className="text-sm font-medium text-gray-800">
-                          {users.filter(u => u.status === 'active').length}
-                        </span>
+                    </div>
+                    <div className="flex items-start">
+                      <div className="flex-shrink-0 bg-primary/10 rounded-full p-2">
+                        <CheckCircleIcon size={16} className="text-primary" />
+                      </div>
+                      <div className="ml-3">
+                        <p className="text-sm text-foreground">
+                          Internship approved:{' '}
+                          <span className="font-medium">UX/UI Design Intern</span>
+                        </p>
+                        <p className="text-xs text-muted-foreground">1 day ago</p>
                       </div>
                     </div>
                   </div>
                 </div>
-              </div>
-            </div>}
+                
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <Card className="border border-border">
+                    <CardHeader>
+                      <CardTitle className="text-foreground">
+                        Pending Approvals
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      {pendingInternships.filter(i => i.status === 'pending').length > 0 ? <div className="space-y-3">
+                          {pendingInternships.filter(i => i.status === 'pending').slice(0, 3).map(internship => <div key={internship.id} className="flex justify-between items-center bg-card p-3 rounded-md shadow-sm border border-border">
+                                <div>
+                                  <p className="text-sm font-medium text-foreground">
+                                    {internship.title}
+                                  </p>
+                                  <p className="text-xs text-muted-foreground">
+                                    {internship.company} •{' '}
+                                    {new Date(internship.postedDate).toLocaleDateString()}
+                                  </p>
+                                </div>
+                                <Link to={`/internship-approval/${internship.id}`} className="text-primary hover:text-primary/80 text-sm">
+                                  Review
+                                </Link>
+                              </div>)}
+                          {pendingInternships.filter(i => i.status === 'pending').length > 3 && <div className="text-center mt-2">
+                              <button onClick={() => setActiveTab('approvals')} className="text-sm text-primary hover:text-primary/80">
+                                View all pending approvals
+                              </button>
+                            </div>}
+                        </div> : <p className="text-sm text-muted-foreground text-center py-4">
+                          No pending approvals
+                        </p>}
+                    </CardContent>
+                  </Card>
+                  <Card className="border border-border">
+                    <CardHeader>
+                      <CardTitle className="text-foreground">
+                        User Statistics
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="space-y-3">
+                        <div className="flex justify-between items-center">
+                          <span className="text-sm text-muted-foreground">
+                            Total Students:
+                          </span>
+                          <span className="text-sm font-medium text-foreground">
+                            {users.filter(u => u.role === 'student').length}
+                          </span>
+                        </div>
+                        <div className="flex justify-between items-center">
+                          <span className="text-sm text-muted-foreground">
+                            Total Companies:
+                          </span>
+                          <span className="text-sm font-medium text-foreground">
+                            {users.filter(u => u.role === 'company').length}
+                          </span>
+                        </div>
+                        <div className="flex justify-between items-center">
+                          <span className="text-sm text-muted-foreground">
+                            Total Admins:
+                          </span>
+                          <span className="text-sm font-medium text-foreground">
+                            {users.filter(u => u.role === 'admin').length}
+                          </span>
+                        </div>
+                        <div className="flex justify-between items-center">
+                          <span className="text-sm text-muted-foreground">
+                            New Users (Last 7 Days):
+                          </span>
+                          <span className="text-sm font-medium text-foreground">
+                            3
+                          </span>
+                        </div>
+                        <div className="flex justify-between items-center">
+                          <span className="text-sm text-muted-foreground">
+                            Active Users:
+                          </span>
+                          <span className="text-sm font-medium text-foreground">
+                            {users.filter(u => u.status === 'active').length}
+                          </span>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                </div>
+              </div>}
           {activeTab === 'approvals' && <div>
-              <h2 className="text-lg font-medium text-gray-900 mb-6">
-                Content Approvals
-              </h2>
-              <div className="overflow-x-auto">
-                <table className="min-w-full divide-y divide-gray-200">
-                  <thead className="bg-gray-50">
-                    <tr>
-                      <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Internship
-                      </th>
-                      <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Company
-                      </th>
-                      <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Details
-                      </th>
-                      <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Status
-                      </th>
-                      <th scope="col" className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Actions
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody className="bg-white divide-y divide-gray-200">
-                    {pendingInternships.map(internship => <tr key={internship.id}>
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          <div className="text-sm font-medium text-gray-900">
-                            {internship.title}
-                          </div>
-                          <div className="text-xs text-gray-500">
-                            ID: {internship.id}
-                          </div>
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          <div className="text-sm text-gray-900">
-                            {internship.company}
-                          </div>
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          <div className="text-sm text-gray-900">
-                            {internship.location}
-                          </div>
-                          <div className="text-xs text-gray-500">
-                            {internship.type} • Posted:{' '}
-                            {new Date(internship.postedDate).toLocaleDateString()}
-                          </div>
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          {getStatusBadge(internship.status)}
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                          {internship.status === 'pending' ? <div className="flex justify-end space-x-2">
-                              <Link to={`/internship-approval/${internship.id}`} className="text-blue-600 hover:text-blue-900 flex items-center">
-                                <EyeIcon size={16} className="mr-1" />
-                                View
-                              </Link>
-                              <button onClick={() => handleRejectInternship(internship.id)} className="text-red-600 hover:text-red-900 flex items-center">
-                                <XIcon size={16} className="mr-1" />
-                                Reject
-                              </button>
-                              <button onClick={() => handleApproveInternship(internship.id)} className="text-green-600 hover:text-green-900 flex items-center">
-                                <CheckIcon size={16} className="mr-1" />
-                                Approve
-                              </button>
-                            </div> : <Link to={`/internship-approval/${internship.id}`} className="text-blue-600 hover:text-blue-900 flex items-center justify-end">
-                              <EyeIcon size={16} className="mr-1" />
-                              View
-                            </Link>}
-                        </td>
-                      </tr>)}
-                  </tbody>
-                </table>
+              <div className="flex justify-between items-center mb-6">
+                <h2 className="text-lg font-medium text-foreground">
+                  Content Approvals
+                </h2>
+                <div className="text-sm text-muted-foreground">
+                  {pendingInternships.length} pending approvals
+                </div>
               </div>
+              
+              {internshipsLoading ? (
+                <div className="flex justify-center items-center h-32">
+                  <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-primary"></div>
+                </div>
+              ) : pendingInternships.length ? (
+                <div className="space-y-4">
+                  {pendingInternships.map(internship => (
+                    <Card key={internship.id} className="border border-border">
+                      <CardContent className="p-4">
+                        <div className="flex justify-between">
+                          <div>
+                            <h3 className="text-lg font-medium text-foreground">
+                              {internship.title}
+                            </h3>
+                            <p className="text-muted-foreground">
+                              {internship.company} • {internship.location}
+                            </p>
+                            <div className="flex items-center mt-1 space-x-2">
+                              <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                                {internship.type}
+                              </span>
+                              <span className="text-sm text-muted-foreground">
+                                Posted {new Date(internship.postedDate).toLocaleDateString()}
+                              </span>
+                            </div>
+                          </div>
+                          <div className="flex space-x-2">
+                            <Button 
+                              onClick={() => handleApproveInternship(internship.id)}
+                              variant="default"
+                              className="bg-green-600 hover:bg-green-700"
+                            >
+                              Approve
+                            </Button>
+                            <Button 
+                              onClick={() => handleRejectInternship(internship.id)}
+                              variant="default"
+                              className="bg-red-600 hover:bg-red-700"
+                            >
+                              Reject
+                            </Button>
+                            <Button variant="default">
+                              View Details
+                            </Button>
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  ))}
+                </div>
+              ) : (
+                <div className="text-center py-12">
+                  <CheckCircleIcon size={48} className="mx-auto text-green-500 mb-4" />
+                  <h3 className="text-lg font-medium text-foreground mb-2">
+                    All Caught Up!
+                  </h3>
+                  <p className="text-muted-foreground">
+                    No pending internship approvals at this time.
+                  </p>
+                </div>
+              )}
             </div>}
           {activeTab === 'users' && <div>
-              <h2 className="text-lg font-medium text-gray-900 mb-6">
-                User Management
-              </h2>
-              <div className="overflow-x-auto">
-                <table className="min-w-full divide-y divide-gray-200">
-                  <thead className="bg-gray-50">
-                    <tr>
-                      <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Name
-                      </th>
-                      <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Email
-                      </th>
-                      <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Role
-                      </th>
-                      <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Join Date
-                      </th>
-                      <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Status
-                      </th>
-                      <th scope="col" className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Actions
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody className="bg-white divide-y divide-gray-200">
-                    {users.map(user => <tr key={user.id}>
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          <div className="text-sm font-medium text-gray-900">
-                            {user.name}
-                          </div>
-                          <div className="text-xs text-gray-500">
-                            ID: {user.id}
-                          </div>
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          <div className="text-sm text-gray-900">
-                            {user.email}
-                          </div>
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          {getRoleBadge(user.role)}
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap">
-                            <div className="text-sm text-gray-900">
-                              {user.joinDate ? new Date(user.joinDate).toLocaleDateString() : '—'}
-                            </div>
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${user.status === 'active' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
-                            {user.status === 'active' ? 'Active' : 'Inactive'}
-                          </span>
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                          <div className="flex justify-end space-x-2">
-                            <button 
-                              onClick={() => handleViewUser(user.id)}
-                              className="text-blue-600 hover:text-blue-900"
-                            >
-                              View
-                            </button>
-                            {user.role !== 'admin' && <>
-                                <button 
-                                  onClick={() => handleEditUser(user.id)}
-                                  className="text-indigo-600 hover:text-indigo-900"
-                                >
-                                  Edit
-                                </button>
-                                {user.status === 'active' ? <button 
-                                    onClick={() => handleToggleUserStatus(user.id)}
-                                    className="text-red-600 hover:text-red-900"
-                                  >
-                                    Disable
-                                  </button> : <button 
-                                    onClick={() => handleToggleUserStatus(user.id)}
-                                    className="text-green-600 hover:text-green-900"
-                                  >
-                                    Enable
-                                  </button>}
-                              </>}
-                          </div>
-                        </td>
-                      </tr>)}
-                  </tbody>
-                </table>
+              <div className="flex justify-between items-center mb-6">
+                <h2 className="text-lg font-medium text-foreground">
+                  User Management
+                </h2>
+                <div className="flex space-x-3">
+                  <div className="relative">
+                    <input
+                      type="text"
+                      placeholder="Search users..."
+                      className="pl-10 pr-4 py-2 border border-input rounded-md bg-background text-foreground focus:ring-ring focus:border-ring focus:ring-2"
+                    />
+                    <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                      <svg className="h-5 w-5 text-gray-400" fill="currentColor" viewBox="0 0 20 20">
+                        <path fillRule="evenodd" d="M8 4a4 4 0 100 8 4 4 0 000-8zM2 8a6 6 0 1110.89 3.476l4.817 4.817a1 1 0 01-1.414 1.414l-4.816-4.816A6 6 0 012 8z" clipRule="evenodd" />
+                      </svg>
+                    </div>
+                  </div>
+                  <Button variant="default">
+                    Add User
+                  </Button>
+                </div>
               </div>
+              
+              {usersLoading ? (
+                <div className="flex justify-center items-center h-32">
+                  <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-primary"></div>
+                </div>
+              ) : users.length ? (
+                <div className="overflow-x-auto">
+                  <table className="min-w-full divide-y divide-border">
+                    <thead className="bg-muted">
+                      <tr>
+                        <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
+                          User
+                        </th>
+                        <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
+                          Email
+                        </th>
+                        <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
+                          Role
+                        </th>
+                        <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
+                          Join Date
+                        </th>
+                        <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
+                          Status
+                        </th>
+                        <th scope="col" className="px-6 py-3 text-right text-xs font-medium text-muted-foreground uppercase tracking-wider">
+                          Actions
+                        </th>
+                      </tr>
+                    </thead>
+                    <tbody className="bg-card divide-y divide-border">
+                      {users.map(user => (
+                        <tr key={user.id} className="hover:bg-muted/50">
+                          <td className="px-6 py-4 whitespace-nowrap">
+                            <div className="flex items-center">
+                              <div className="flex-shrink-0 h-10 w-10">
+                                <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center">
+                                  <span className="text-primary font-medium">
+                                    {user.name.charAt(0)}
+                                  </span>
+                                </div>
+                              </div>
+                              <div className="ml-4">
+                                <div className="text-sm font-medium text-foreground">
+                                  {user.name}
+                                </div>
+                                <div className="text-sm text-muted-foreground">
+                                  ID: {user.id}
+                                </div>
+                              </div>
+                            </div>
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap">
+                            <div className="text-sm text-foreground">
+                              {user.email}
+                            </div>
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap">
+                            {getRoleBadge(user.role)}
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap">
+                              <div className="text-sm text-foreground">
+                                {user.joinDate ? new Date(user.joinDate).toLocaleDateString() : '—'}
+                              </div>
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap">
+                            <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                              user.status === 'active' 
+                                ? 'bg-green-100 text-green-800' 
+                                : 'bg-red-100 text-red-800'
+                            }`}>
+                              {user.status === 'active' ? 'Active' : 'Inactive'}
+                            </span>
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                            <div className="flex justify-end space-x-2">
+                              <button 
+                                onClick={() => handleViewUser(user.id)}
+                                className="text-primary hover:text-primary/80"
+                              >
+                                View
+                              </button>
+                              {user.role !== 'admin' && <>
+                                  <button 
+                                    onClick={() => handleEditUser(user.id)}
+                                    className="text-primary hover:text-primary/80"
+                                  >
+                                    Edit
+                                  </button>
+                                  {user.status === 'active' ? <button 
+                                      onClick={() => handleToggleUserStatus(user.id)}
+                                      className="text-red-600 hover:text-red-800"
+                                    >
+                                      Disable
+                                    </button> : <button 
+                                      onClick={() => handleToggleUserStatus(user.id)}
+                                      className="text-green-600 hover:text-green-800"
+                                    >
+                                      Enable
+                                    </button>}
+                                </>}
+                            </div>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              ) : (
+                <div className="text-center py-12">
+                  <UsersIcon size={48} className="mx-auto text-gray-400 mb-4" />
+                  <h3 className="text-lg font-medium text-foreground mb-2">
+                    No Users Found
+                  </h3>
+                  <p className="text-muted-foreground mb-4">
+                    There are no users in the system yet.
+                  </p>
+                  <Button variant="default">
+                    Add Your First User
+                  </Button>
+                </div>
+              )}
             </div>}
           {activeTab === 'analytics' && <div>
               <div className="flex items-center justify-between mb-6">
-                <h2 className="text-lg font-medium text-gray-900">Website Analytics</h2>
+                <h2 className="text-lg font-medium text-foreground">Website Analytics</h2>
                 <div className="inline-flex rounded-md shadow-sm border overflow-hidden">
-                  <button onClick={() => setAnalyticsRange('7d')} className={`px-3 py-1.5 text-sm ${analyticsRange === '7d' ? 'bg-gray-900 text-white' : 'bg-white text-gray-700'}`}>7d</button>
-                  <button onClick={() => setAnalyticsRange('30d')} className={`px-3 py-1.5 text-sm border-l ${analyticsRange === '30d' ? 'bg-gray-900 text-white' : 'bg-white text-gray-700'}`}>30d</button>
-                  <button onClick={() => setAnalyticsRange('12m')} className={`px-3 py-1.5 text-sm border-l ${analyticsRange === '12m' ? 'bg-gray-900 text-white' : 'bg-white text-gray-700'}`}>12m</button>
+                  <button onClick={() => setAnalyticsRange('7d')} className={`px-3 py-1.5 text-sm ${analyticsRange === '7d' ? 'bg-primary text-primary-foreground' : 'bg-card text-foreground'}`}>7d</button>
+                  <button onClick={() => setAnalyticsRange('30d')} className={`px-3 py-1.5 text-sm border-l border-border ${analyticsRange === '30d' ? 'bg-primary text-primary-foreground' : 'bg-card text-foreground'}`}>30d</button>
+                  <button onClick={() => setAnalyticsRange('12m')} className={`px-3 py-1.5 text-sm border-l border-border ${analyticsRange === '12m' ? 'bg-primary text-primary-foreground' : 'bg-card text-foreground'}`}>12m</button>
                 </div>
               </div>
 
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                <div className="bg-white rounded-lg shadow-sm p-4">
-                  <h3 className="text-sm font-medium text-gray-700 mb-3">User Signups</h3>
-                  <div className="h-64">
-                    <ResponsiveContainer width="100%" height="100%">
-                      <LineChart data={signupsData} margin={{ top: 10, right: 20, left: 0, bottom: 0 }}>
-                        <CartesianGrid strokeDasharray="3 3" stroke="#E5E7EB" />
-                        <XAxis dataKey="label" stroke="#6B7280" />
-                        <YAxis stroke="#6B7280" />
-                        <Tooltip />
-                        <Line type="monotone" dataKey="signups" stroke="#6366F1" strokeWidth={2} dot={false} activeDot={{ r: 5 }} />
-                      </LineChart>
-                    </ResponsiveContainer>
-                  </div>
-                </div>
+                <Card className="bg-card rounded-lg shadow-sm p-4 border border-border">
+                  <CardHeader>
+                    <CardTitle className="text-sm font-medium text-foreground">
+                      User Signups
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="h-64">
+                      <ResponsiveContainer width="100%" height="100%">
+                        <LineChart data={signupsData} margin={{ top: 10, right: 20, left: 0, bottom: 0 }}>
+                          <CartesianGrid strokeDasharray="3 3" stroke="#E5E7EB" />
+                          <XAxis dataKey="label" stroke="#6B7280" />
+                          <YAxis stroke="#6B7280" />
+                          <Tooltip />
+                          <Line type="monotone" dataKey="signups" stroke="#6366F1" strokeWidth={2} dot={false} activeDot={{ r: 5 }} />
+                        </LineChart>
+                      </ResponsiveContainer>
+                    </div>
+                  </CardContent>
+                </Card>
 
-                <div className="bg-white rounded-lg shadow-sm p-4">
-                  <h3 className="text-sm font-medium text-gray-700 mb-3">Site Traffic</h3>
-                  <div className="h-64">
-                    <ResponsiveContainer width="100%" height="100%">
-                      <AreaChart data={trafficData} margin={{ top: 10, right: 20, left: 0, bottom: 0 }}>
-                        <defs>
-                          <linearGradient id="colorVisits" x1="0" y1="0" x2="0" y2="1">
-                            <stop offset="5%" stopColor="#06B6D4" stopOpacity={0.35}/>
-                            <stop offset="95%" stopColor="#06B6D4" stopOpacity={0}/>
-                          </linearGradient>
-                          <linearGradient id="colorConv" x1="0" y1="0" x2="0" y2="1">
-                            <stop offset="5%" stopColor="#10B981" stopOpacity={0.35}/>
-                            <stop offset="95%" stopColor="#10B981" stopOpacity={0}/>
-                          </linearGradient>
-                        </defs>
-                        <CartesianGrid strokeDasharray="3 3" stroke="#E5E7EB" />
-                        <XAxis dataKey="label" stroke="#6B7280" />
-                        <YAxis stroke="#6B7280" />
-                        <Tooltip />
-                        <Area type="monotone" dataKey="visits" stroke="#06B6D4" fillOpacity={1} fill="url(#colorVisits)" />
-                        <Area type="monotone" dataKey="conversions" stroke="#10B981" fillOpacity={1} fill="url(#colorConv)" />
-                        <Legend />
-                      </AreaChart>
-                    </ResponsiveContainer>
-                  </div>
-                </div>
+                <Card className="bg-card rounded-lg shadow-sm p-4 border border-border">
+                  <CardHeader>
+                    <CardTitle className="text-sm font-medium text-foreground">
+                      Site Traffic
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="h-64">
+                      <ResponsiveContainer width="100%" height="100%">
+                        <AreaChart data={trafficData} margin={{ top: 10, right: 20, left: 0, bottom: 0 }}>
+                          <defs>
+                            <linearGradient id="colorVisits" x1="0" y1="0" x2="0" y2="1">
+                              <stop offset="5%" stopColor="#06B6D4" stopOpacity={0.35}/>
+                              <stop offset="95%" stopColor="#06B6D4" stopOpacity={0}/>
+                            </linearGradient>
+                            <linearGradient id="colorConv" x1="0" y1="0" x2="0" y2="1">
+                              <stop offset="5%" stopColor="#10B981" stopOpacity={0.35}/>
+                              <stop offset="95%" stopColor="#10B981" stopOpacity={0}/>
+                            </linearGradient>
+                          </defs>
+                          <CartesianGrid strokeDasharray="3 3" stroke="#E5E7EB" />
+                          <XAxis dataKey="label" stroke="#6B7280" />
+                          <YAxis stroke="#6B7280" />
+                          <Tooltip />
+                          <Area type="monotone" dataKey="visits" stroke="#06B6D4" fillOpacity={1} fill="url(#colorVisits)" />
+                          <Area type="monotone" dataKey="conversions" stroke="#10B981" fillOpacity={1} fill="url(#colorConv)" />
+                          <Legend />
+                        </AreaChart>
+                      </ResponsiveContainer>
+                    </div>
+                  </CardContent>
+                </Card>
 
-                <div className="bg-white rounded-lg shadow-sm p-4">
-                  <h3 className="text-sm font-medium text-gray-700 mb-3">Internship Postings</h3>
-                  <div className="h-64">
-                    <ResponsiveContainer width="100%" height="100%">
-                      <BarChart data={postingsData} margin={{ top: 10, right: 20, left: 0, bottom: 0 }}>
-                        <CartesianGrid strokeDasharray="3 3" stroke="#E5E7EB" />
-                        <XAxis dataKey="label" stroke="#6B7280" />
-                        <YAxis stroke="#6B7280" />
-                        <Tooltip />
-                        <Legend />
-                        <Bar dataKey="posted" fill="#8B5CF6" radius={[4,4,0,0]} />
-                        <Bar dataKey="approved" fill="#F59E0B" radius={[4,4,0,0]} />
-                      </BarChart>
-                    </ResponsiveContainer>
-                  </div>
-                </div>
+                <Card className="bg-card rounded-lg shadow-sm p-4 border border-border">
+                  <CardHeader>
+                    <CardTitle className="text-sm font-medium text-foreground">
+                      Internship Postings
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="h-64">
+                      <ResponsiveContainer width="100%" height="100%">
+                        <BarChart data={postingsData} margin={{ top: 10, right: 20, left: 0, bottom: 0 }}>
+                          <CartesianGrid strokeDasharray="3 3" stroke="#E5E7EB" />
+                          <XAxis dataKey="label" stroke="#6B7280" />
+                          <YAxis stroke="#6B7280" />
+                          <Tooltip />
+                          <Legend />
+                          <Bar dataKey="posted" fill="#8B5CF6" radius={[4,4,0,0]} />
+                          <Bar dataKey="approved" fill="#F59E0B" radius={[4,4,0,0]} />
+                        </BarChart>
+                      </ResponsiveContainer>
+                    </div>
+                  </CardContent>
+                </Card>
 
-                <div className="bg-white rounded-lg shadow-sm p-4">
-                  <h3 className="text-sm font-medium text-gray-700 mb-3">User Roles Distribution</h3>
-                  <div className="h-64">
-                    <ResponsiveContainer width="100%" height="100%">
-                      <RechartsPieChart>
-                        <Pie data={rolesPie} dataKey="value" nameKey="name" outerRadius={88} label>
-                          {rolesPie.map((_entry, index) => (
-                            <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                          ))}
-                        </Pie>
-                        <Legend />
-                        <Tooltip />
-                      </RechartsPieChart>
-                    </ResponsiveContainer>
-                  </div>
+                <Card className="bg-card rounded-lg shadow-sm p-4 border border-border">
+                  <CardHeader>
+                    <CardTitle className="text-sm font-medium text-foreground">
+                      User Roles Distribution
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="h-64">
+                      <ResponsiveContainer width="100%" height="100%">
+                        <RechartsPieChart>
+                          <Pie data={rolesPie} dataKey="value" nameKey="name" outerRadius={88} label>
+                            {rolesPie.map((_entry, index) => (
+                              <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                            ))}
+                          </Pie>
+                          <Legend />
+                          <Tooltip />
+                        </RechartsPieChart>
+                      </ResponsiveContainer>
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
+
+              {/* New AI Analytics Section */}
+              <div className="mt-8">
+                <h3 className="text-lg font-medium text-foreground mb-4">AI-Powered Platform Insights</h3>
+                
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                  {/* Career Field Distribution */}
+                  <Card className="bg-card rounded-lg shadow-sm p-4 border border-border">
+                    <CardHeader>
+                      <CardTitle className="text-sm font-medium text-foreground">
+                        Career Field Distribution
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="h-64">
+                        <ResponsiveContainer width="100%" height="100%">
+                          <RechartsPieChart>
+                            <Pie 
+                              data={realTimeMetrics.internshipPerformance} 
+                              dataKey="count" 
+                              nameKey="category" 
+                              cx="50%" 
+                              cy="50%" 
+                              outerRadius={80} 
+                              fill="#8884d8" 
+                              label
+                            >
+                              {realTimeMetrics.internshipPerformance.map((_, index) => (
+                                <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                              ))}
+                            </Pie>
+                            <Tooltip />
+                            <Legend />
+                          </RechartsPieChart>
+                        </ResponsiveContainer>
+                      </div>
+                      <div className="mt-4">
+                        <p className="text-sm text-muted-foreground">
+                          Distribution of internships across different career fields on the platform
+                        </p>
+                      </div>
+                    </CardContent>
+                  </Card>
+
+                  {/* AI Insights */}
+                  <Card className="bg-card rounded-lg shadow-sm p-4 border border-border">
+                    <CardHeader>
+                      <CardTitle className="text-sm font-medium text-foreground">
+                        AI Recommendations
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="space-y-4">
+                        <div className="p-4 bg-blue-50 rounded-lg border border-blue-100">
+                          <div className="flex items-start">
+                            <div className="flex-shrink-0">
+                              <div className="w-6 h-6 rounded-full bg-blue-500 flex items-center justify-center">
+                                <span className="text-white text-xs font-bold">1</span>
+                              </div>
+                            </div>
+                            <div className="ml-3">
+                              <h4 className="text-sm font-medium text-blue-800">Growth Opportunity</h4>
+                              <p className="text-sm text-blue-700 mt-1">
+                                Healthcare internships show 25% growth potential. Consider promoting this field to students.
+                              </p>
+                            </div>
+                          </div>
+                        </div>
+                        
+                        <div className="p-4 bg-green-50 rounded-lg border border-green-100">
+                          <div className="flex items-start">
+                            <div className="flex-shrink-0">
+                              <div className="w-6 h-6 rounded-full bg-green-500 flex items-center justify-center">
+                                <span className="text-white text-xs font-bold">2</span>
+                              </div>
+                            </div>
+                            <div className="ml-3">
+                              <h4 className="text-sm font-medium text-green-800">Skill Gap Analysis</h4>
+                              <p className="text-sm text-green-700 mt-1">
+                                Students interested in Finance lack data analysis skills. Recommend adding related courses.
+                              </p>
+                            </div>
+                          </div>
+                        </div>
+                        
+                        <div className="p-4 bg-purple-50 rounded-lg border border-purple-100">
+                          <div className="flex items-start">
+                            <div className="flex-shrink-0">
+                              <div className="w-6 h-6 rounded-full bg-purple-500 flex items-center justify-center">
+                                <span className="text-white text-xs font-bold">3</span>
+                              </div>
+                            </div>
+                            <div className="ml-3">
+                              <h4 className="text-sm font-medium text-purple-800">Market Trend</h4>
+                              <p className="text-sm text-purple-700 mt-1">
+                                Remote internships increased by 40% this quarter. Encourage companies to offer more remote options.
+                              </p>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
                 </div>
               </div>
             </div>}
@@ -800,93 +997,159 @@ const AdminDashboard = () => {
           {activeTab === 'realtime' && (
             <div>
               <div className="flex justify-between items-center mb-6">
-                <h2 className="text-lg font-medium text-gray-900">
+                <h2 className="text-lg font-medium text-foreground">
                   Real-time System Dashboard
                 </h2>
-                <div className="flex items-center space-x-2 text-sm text-gray-600">
-                  <Activity size={16} className="animate-pulse text-green-500" />
-                  <span>Live monitoring</span>
+                <div className="flex items-center space-x-2 text-sm text-muted-foreground">
+                  <div className="w-3 h-3 bg-green-500 rounded-full animate-pulse"></div>
+                  <span>Live</span>
                 </div>
               </div>
-
-              {/* Real-time System Health */}
-              <div className="grid grid-cols-1 md:grid-cols-5 gap-6 mb-8">
-                <div className="bg-gradient-to-br from-blue-500 to-blue-700 p-6 rounded-xl text-white shadow-lg">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="text-blue-100">Total Users</p>
-                      <p className="text-3xl font-bold">{realTimeMetrics.totalUsers}</p>
-                      <p className="text-sm text-blue-200 mt-1">+12 today</p>
+              
+              <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
+                {/* Active Users */}
+                <Card className="bg-gradient-to-r from-blue-500 to-blue-600 text-white">
+                  <CardContent className="p-6">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="text-blue-100">Active Users</p>
+                        <p className="text-3xl font-bold">{realTimeMetrics.activeUsers || 0}</p>
+                      </div>
+                      <UsersIcon size={32} className="text-blue-200" />
                     </div>
-                    <UsersIcon size={28} className="text-blue-200" />
-                  </div>
-                </div>
-                <div className="bg-gradient-to-br from-green-500 to-green-700 p-6 rounded-xl text-white shadow-lg">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="text-green-100">Active Now</p>
-                      <p className="text-3xl font-bold">{realTimeMetrics.activeUsers}</p>
-                      <p className="text-sm text-green-200 mt-1">93% online</p>
+                    <div className="mt-4 pt-4 border-t border-blue-400/30">
+                      <div className="flex justify-between text-sm">
+                        <span className="text-blue-100">Students</span>
+                        <span>{realTimeMetrics.userActivityByRole.find(r => r.role === 'Students')?.active || 0}</span>
+                      </div>
+                      <div className="flex justify-between text-sm">
+                        <span className="text-blue-100">Companies</span>
+                        <span>{realTimeMetrics.userActivityByRole.find(r => r.role === 'Companies')?.active || 0}</span>
+                      </div>
+                      <div className="flex justify-between text-sm">
+                        <span className="text-blue-100">Admins</span>
+                        <span>{realTimeMetrics.userActivityByRole.find(r => r.role === 'Admins')?.active || 0}</span>
+                      </div>
                     </div>
-                    <Activity size={28} className="text-green-200 animate-pulse" />
-                  </div>
-                </div>
-                <div className="bg-gradient-to-br from-purple-500 to-purple-700 p-6 rounded-xl text-white shadow-lg">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="text-purple-100">Internships</p>
-                      <p className="text-3xl font-bold">{realTimeMetrics.totalInternships}</p>
-                      <p className="text-sm text-purple-200 mt-1">+3 pending</p>
+                  </CardContent>
+                </Card>
+                
+                {/* Active Internships */}
+                <Card className="bg-gradient-to-r from-green-500 to-green-600 text-white">
+                  <CardContent className="p-6">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="text-green-100">Active Internships</p>
+                        <p className="text-3xl font-bold">{realTimeMetrics.totalInternships || 0}</p>
+                      </div>
+                      <BriefcaseIcon size={32} className="text-green-200" />
                     </div>
-                    <BriefcaseIcon size={28} className="text-purple-200" />
-                  </div>
-                </div>
-                <div className="bg-gradient-to-br from-orange-500 to-orange-700 p-6 rounded-xl text-white shadow-lg">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="text-orange-100">Pending</p>
-                      <p className="text-3xl font-bold">{realTimeMetrics.pendingApprovals}</p>
-                      <p className="text-sm text-orange-200 mt-1">Need review</p>
+                    <div className="mt-4 pt-4 border-t border-green-400/30">
+                      <div className="flex justify-between text-sm">
+                        <span className="text-green-100">Full-time</span>
+                        <span>15</span>
+                      </div>
+                      <div className="flex justify-between text-sm">
+                        <span className="text-green-100">Part-time</span>
+                        <span>8</span>
+                      </div>
+                      <div className="flex justify-between text-sm">
+                        <span className="text-green-100">Remote</span>
+                        <span>5</span>
+                      </div>
                     </div>
-                    <ClockIcon size={28} className="text-orange-200" />
-                  </div>
-                </div>
-                <div className="bg-gradient-to-br from-emerald-500 to-emerald-700 p-6 rounded-xl text-white shadow-lg">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="text-emerald-100">System Health</p>
-                      <p className="text-3xl font-bold">{realTimeMetrics.systemHealth}%</p>
-                      <p className="text-sm text-emerald-200 mt-1">All systems</p>
+                  </CardContent>
+                </Card>
+                
+                {/* Pending Actions */}
+                <Card className="bg-gradient-to-r from-yellow-500 to-yellow-600 text-white">
+                  <CardContent className="p-6">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="text-yellow-100">Pending Actions</p>
+                        <p className="text-3xl font-bold">{realTimeMetrics.pendingApprovals || 0}</p>
+                      </div>
+                      <AlertCircleIcon size={32} className="text-yellow-200" />
                     </div>
-                    <CheckCircleIcon size={28} className="text-emerald-200" />
-                  </div>
-                </div>
+                    <div className="mt-4 pt-4 border-t border-yellow-400/30">
+                      <div className="flex justify-between text-sm">
+                        <span className="text-yellow-100">Internships</span>
+                        <span>3</span>
+                      </div>
+                      <div className="flex justify-between text-sm">
+                        <span className="text-yellow-100">Applications</span>
+                        <span>2</span>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
               </div>
-
-              {/* Live Status Banner */}
-              <div className="bg-gradient-to-r from-gray-900 to-gray-800 p-6 rounded-xl text-white shadow-lg">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center space-x-4">
-                    <div className="flex space-x-1">
-                      <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></div>
-                      <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse" style={{animationDelay: '0.5s'}}></div>
-                      <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse" style={{animationDelay: '1s'}}></div>
+              
+              {/* Real-time Activity Feed */}
+              <Card className="border border-border">
+                <CardHeader>
+                  <CardTitle className="text-foreground">
+                    Real-time Activity Feed
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-4">
+                    <div className="flex items-start pb-4 border-b border-border last:border-0 last:pb-0">
+                      <div className="flex-shrink-0 bg-primary/10 rounded-full p-2">
+                        <UsersIcon size={16} className="text-primary" />
+                      </div>
+                      <div className="ml-3 flex-1">
+                        <p className="text-sm text-foreground">
+                          <span className="font-medium">New user registered</span> - John Doe
+                        </p>
+                        <div className="flex items-center mt-1">
+                          <span className="text-xs text-muted-foreground">
+                            2 minutes ago
+                          </span>
+                          <div className="ml-2 w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
+                        </div>
+                      </div>
                     </div>
-                    <div>
-                      <h4 className="font-semibold text-lg">Real-time Monitoring Active</h4>
-                      <p className="text-gray-300">All systems operational • Data refreshes every 15 seconds</p>
+                    <div className="flex items-start pb-4 border-b border-border last:border-0 last:pb-0">
+                      <div className="flex-shrink-0 bg-primary/10 rounded-full p-2">
+                        <BriefcaseIcon size={16} className="text-primary" />
+                      </div>
+                      <div className="ml-3 flex-1">
+                        <p className="text-sm text-foreground">
+                          <span className="font-medium">New internship posted</span> - Software Engineer Intern
+                        </p>
+                        <div className="flex items-center mt-1">
+                          <span className="text-xs text-muted-foreground">
+                            5 minutes ago
+                          </span>
+                          <div className="ml-2 w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
+                        </div>
+                      </div>
+                    </div>
+                    <div className="flex items-start pb-4 border-b border-border last:border-0 last:pb-0">
+                      <div className="flex-shrink-0 bg-primary/10 rounded-full p-2">
+                        <CheckCircleIcon size={16} className="text-primary" />
+                      </div>
+                      <div className="ml-3 flex-1">
+                        <p className="text-sm text-foreground">
+                          <span className="font-medium">Internship approved</span> - Marketing Intern
+                        </p>
+                        <div className="flex items-center mt-1">
+                          <span className="text-xs text-muted-foreground">
+                            12 minutes ago
+                          </span>
+                          <div className="ml-2 w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
+                        </div>
+                      </div>
                     </div>
                   </div>
-                  <div className="text-right">
-                    <p className="text-sm text-gray-400">Server time</p>
-                    <p className="font-medium text-lg">{new Date().toLocaleTimeString()}</p>
-                  </div>
-                </div>
-              </div>
+                </CardContent>
+              </Card>
             </div>
           )}
         </div>
       </div>
-    </div>;
+    </div>
+  )
 };
 export default AdminDashboard;

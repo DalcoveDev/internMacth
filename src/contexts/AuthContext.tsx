@@ -1,5 +1,4 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-import { login as apiLogin, signup as apiSignup } from '../api';
 
 // User interface
 export interface User {
@@ -75,102 +74,71 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     }
   };
 
-  // Login function
+  // Mock login function
   const login = async (credentials: { email: string; password: string; role: string }) => {
     try {
       setLoading(true);
       setError(null);
 
-      const response = await apiLogin(credentials);
-      
-      // Extract user and token from response
-      const { user: userData, token } = response;
-      
+      // Simulate network delay
+      await new Promise(resolve => setTimeout(resolve, 800));
+
+      // Create mock user data
+      const mockUser: User = {
+        id: Date.now(),
+        name: credentials.email.split('@')[0],
+        email: credentials.email.toLowerCase(),
+        role: credentials.role as 'student' | 'company' | 'admin',
+        status: 'active',
+        createdAt: new Date().toISOString()
+      };
+
       // Store in localStorage
-      localStorage.setItem('user', JSON.stringify(userData));
-      localStorage.setItem('token', token);
+      localStorage.setItem('user', JSON.stringify(mockUser));
+      localStorage.setItem('token', 'mock_token_' + Date.now());
       
       // Update state
-      setUser(userData);
+      setUser(mockUser);
       
     } catch (error: any) {
       console.error('Login error:', error);
-      
-      // Handle different error scenarios
-      if (error.message?.includes('429')) {
-        setError('Too many requests. Please wait a moment and try again.');
-        throw error;
-      } else if (error.message?.includes('404') || error.message?.includes('Failed to fetch')) {
-        // Backend not available - simulate login for demo
-        const simulatedUser: User = {
-          id: Date.now(),
-          name: credentials.email.split('@')[0],
-          email: credentials.email.toLowerCase(),
-          role: credentials.role as 'student' | 'company' | 'admin',
-          status: 'active',
-          createdAt: new Date().toISOString()
-        };
-        
-        localStorage.setItem('user', JSON.stringify(simulatedUser));
-        localStorage.setItem('token', 'demo_token_' + Date.now());
-        setUser(simulatedUser);
-        setError('Backend not available. You are in demo mode.');
-      } else {
-        setError('Invalid email or password. Please try again.');
-        throw error;
-      }
+      setError('Login failed. Please try again.');
+      throw error;
     } finally {
       setLoading(false);
     }
   };
 
-  // Signup function
+  // Mock signup function
   const signup = async (userData: { name: string; email: string; password: string; role: string }) => {
     try {
       setLoading(true);
       setError(null);
 
-      const response = await apiSignup(userData);
-      
-      // Extract user and token from response
-      const { user: newUser, token } = response;
-      
+      // Simulate network delay
+      await new Promise(resolve => setTimeout(resolve, 1000));
+
+      // Create mock user data
+      const mockUser: User = {
+        id: Date.now(),
+        name: userData.name.trim(),
+        email: userData.email.toLowerCase(),
+        role: userData.role as 'student' | 'company' | 'admin',
+        status: 'active',
+        createdAt: new Date().toISOString()
+      };
+
       // Store in localStorage
-      localStorage.setItem('user', JSON.stringify(newUser));
-      localStorage.setItem('token', token);
+      localStorage.setItem('user', JSON.stringify(mockUser));
+      localStorage.setItem('token', 'mock_token_' + Date.now());
       
       // Update state
-      setUser(newUser);
+      setUser(mockUser);
       
     } catch (error: any) {
       console.error('Signup error:', error);
-      
-      // Handle different error scenarios
-      if (error.message?.includes('429')) {
-        setError('Too many requests. Please wait a moment and try again.');
-        throw error;
-      } else if (error.message?.includes('404') || error.message?.includes('Failed to fetch')) {
-        // Backend not available - simulate signup for demo
-        const simulatedUser: User = {
-          id: Date.now(),
-          name: userData.name.trim(),
-          email: userData.email.toLowerCase(),
-          role: userData.role as 'student' | 'company' | 'admin',
-          status: 'active',
-          createdAt: new Date().toISOString()
-        };
-        
-        localStorage.setItem('user', JSON.stringify(simulatedUser));
-        localStorage.setItem('token', 'demo_token_' + Date.now());
-        setUser(simulatedUser);
-        setError('Backend not available. You are in demo mode.');
-      } else if (error.message?.includes('409') || error.message?.includes('already exists')) {
-        setError('An account with this email already exists. Please login instead.');
-        throw error;
-      } else {
-        setError('Signup failed. Please try again.');
-        throw error;
-      }
+      setError('Signup failed. Please try again.');
+      throw error;
     } finally {
       setLoading(false);
     }

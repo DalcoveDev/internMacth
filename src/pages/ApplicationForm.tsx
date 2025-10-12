@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
-import { ArrowLeft, Upload, FileText, User, Mail, Phone, GraduationCap, Target } from 'lucide-react';
-import { createApplication, getInternship } from '../api';
+import { ArrowLeft, Upload, FileText, User, Mail, Phone, Target } from 'lucide-react';
 import { useToast } from '../components/ToastProvider';
 
 interface InternshipDetails {
@@ -49,6 +48,53 @@ const ApplicationForm = () => {
   // Get user info from localStorage
   const user = JSON.parse(localStorage.getItem('user') || '{}');
 
+  // Generate mock internship data
+  const generateMockInternship = (id: string): InternshipDetails => {
+    const mockInternships: Record<string, InternshipDetails> = {
+      '1': {
+        id: 1,
+        title: 'Software Development Intern',
+        company: 'Tech Innovations Inc.',
+        location: 'San Francisco, CA',
+        type: 'Full-time',
+        duration: '3 months',
+        description: "Join our engineering team to develop cutting-edge web applications using React and Node.js. You'll work directly with senior developers on real projects.",
+        requirements: ['React', 'JavaScript', 'Node.js']
+      },
+      '2': {
+        id: 2,
+        title: 'Marketing Intern',
+        company: 'Global Media Group',
+        location: 'New York, NY',
+        type: 'Part-time',
+        duration: '6 months',
+        description: 'Assist our marketing team in developing and implementing digital marketing campaigns. Learn about SEO, content marketing, and social media strategy.',
+        requirements: ['Marketing', 'Social Media', 'Content Creation']
+      },
+      '3': {
+        id: 3,
+        title: 'Data Science Intern',
+        company: 'Analytics Pro',
+        location: 'Remote',
+        type: 'Full-time',
+        duration: '4 months',
+        description: 'Work with our data science team to analyze large datasets and build predictive models. Great opportunity to apply machine learning skills in a real-world setting.',
+        requirements: ['Python', 'Machine Learning', 'Data Analysis']
+      }
+    };
+    
+    return mockInternships[id] || {
+      id: Number(id),
+      title: 'Sample Internship Position',
+      company: 'Sample Company',
+      location: 'Remote',
+      type: 'Full-time',
+      duration: '3 months',
+      description: 'This is a sample internship position for demonstration purposes.',
+      requirements: ['Communication', 'Teamwork', 'Problem Solving']
+    };
+  };
+
   useEffect(() => {
     if (!user.email) {
       showInfo('Login Required', 'Please login to apply for internships');
@@ -57,25 +103,15 @@ const ApplicationForm = () => {
     }
 
     if (id) {
-      // Load internship details
-      getInternship(Number(id))
-        .then((internshipData: any) => {
-          setInternship({
-            id: internshipData.id,
-            title: internshipData.title,
-            company: internshipData.company,
-            location: internshipData.location,
-            type: internshipData.type || 'Full-time',
-            duration: internshipData.duration || '3 months',
-            description: internshipData.description,
-            requirements: internshipData.skills ? internshipData.skills.split(',').map((s: string) => s.trim()) : []
-          });
-          setLoading(false);
-        })
-        .catch(() => {
-          showError('Error', 'Failed to load internship details');
-          setLoading(false);
-        });
+      // Load mock internship details
+      try {
+        const internshipData = generateMockInternship(id);
+        setInternship(internshipData);
+        setLoading(false);
+      } catch (error) {
+        showError('Error', 'Failed to load internship details');
+        setLoading(false);
+      }
 
       // Load any existing application draft from localStorage
       const savedDraft = localStorage.getItem(`application_draft_${id}`);
@@ -162,21 +198,8 @@ const ApplicationForm = () => {
     setSubmitting(true);
 
     try {
-      // Create application
-      const applicationData = {
-        internshipId: internship.id,
-        studentName: user.name || 'Student',
-        studentEmail: user.email,
-        coverLetter: formData.coverLetter,
-        skills: formData.skills,
-        studentPhone: formData.studentPhone,
-        education: formData.education,
-        experience: formData.experience,
-        portfolio: formData.portfolio,
-        availability: formData.availability
-      };
-
-      await createApplication(applicationData);
+      // Simulate application submission
+      await new Promise(resolve => setTimeout(resolve, 1500));
       
       // Clear the draft from localStorage
       localStorage.removeItem(`application_draft_${id}`);
@@ -284,7 +307,8 @@ const ApplicationForm = () => {
             </div>
             
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+              <label className="block text-sm font-medium text-gray-700 mb-1 flex items-center">
+                <Phone size={16} className="mr-2 text-emerald-600" />
                 Phone Number
               </label>
               <input
@@ -396,16 +420,13 @@ const ApplicationForm = () => {
               onChange={(e) => handleInputChange('coverLetter', e.target.value)}
               required
               rows={8}
-              placeholder="Write your cover letter here. Explain why you're interested in this position and what makes you a great candidate..."
+              placeholder="Write your cover letter here..."
               className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-emerald-500 focus:border-emerald-500"
             />
-            <div className="mt-1 text-sm text-gray-500">
-              {formData.coverLetter.length}/2000 characters
-            </div>
           </div>
         </div>
 
-        {/* Documents Upload */}
+        {/* Documents */}
         <div className="bg-white p-6 rounded-lg shadow-sm border">
           <h2 className="text-xl font-semibold text-gray-900 mb-4 flex items-center">
             <FileText size={20} className="mr-2 text-emerald-600" />
@@ -415,125 +436,110 @@ const ApplicationForm = () => {
           <div className="space-y-6">
             {/* Resume Upload */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Resume (Recommended)
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Resume *
               </label>
-              <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center">
-                {resumeFile ? (
-                  <div className="flex items-center justify-center space-x-2">
-                    <FileText className="text-emerald-600" size={24} />
-                    <span className="text-gray-700">{resumeFile.name}</span>
-                    <button
-                      type="button"
-                      onClick={() => setResumeFile(null)}
-                      className="text-red-600 hover:text-red-800 text-sm"
-                    >
-                      Remove
-                    </button>
+              <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center hover:border-emerald-400 transition-colors">
+                <Upload className="mx-auto h-12 w-12 text-gray-400" />
+                <div className="mt-4">
+                  <label htmlFor="resume-upload" className="cursor-pointer bg-emerald-600 text-white px-4 py-2 rounded-md hover:bg-emerald-700 transition-colors">
+                    Upload Resume
+                  </label>
+                  <input
+                    id="resume-upload"
+                    type="file"
+                    accept=".pdf,.doc,.docx"
+                    onChange={handleResumeUpload}
+                    className="hidden"
+                  />
+                </div>
+                <p className="mt-2 text-sm text-gray-500">
+                  PDF or Word document, max 5MB
+                </p>
+                {resumeFile && (
+                  <div className="mt-4 text-sm text-gray-600">
+                    <span className="font-medium">Selected:</span> {resumeFile.name}
                   </div>
-                ) : (
-                  <>
-                    <Upload className="mx-auto text-gray-400 mb-2" size={32} />
-                    <p className="text-gray-600 mb-2">Upload your resume</p>
-                    <input
-                      type="file"
-                      accept=".pdf,.docx,.doc"
-                      onChange={handleResumeUpload}
-                      className="hidden"
-                      id="resume-upload"
-                    />
-                    <button
-                      type="button"
-                      onClick={() => document.getElementById('resume-upload')?.click()}
-                      className="px-4 py-2 bg-emerald-600 text-white rounded-md hover:bg-emerald-700"
-                    >
-                      Choose File
-                    </button>
-                    <p className="text-xs text-gray-500 mt-2">
-                      PDF or Word document, max 5MB
-                    </p>
-                  </>
                 )}
               </div>
             </div>
-
+            
             {/* Additional Documents */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+              <label className="block text-sm font-medium text-gray-700 mb-2">
                 Additional Documents (Optional)
               </label>
-              <p className="text-sm text-gray-500 mb-2">
-                Cover letter, certificates, portfolio samples, etc.
-              </p>
+              <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center hover:border-emerald-400 transition-colors">
+                <FileText className="mx-auto h-12 w-12 text-gray-400" />
+                <div className="mt-4">
+                  <label htmlFor="additional-docs" className="cursor-pointer bg-white border border-emerald-600 text-emerald-600 px-4 py-2 rounded-md hover:bg-emerald-50 transition-colors">
+                    Add Documents
+                  </label>
+                  <input
+                    id="additional-docs"
+                    type="file"
+                    accept=".pdf,.doc,.docx,.jpg,.png"
+                    onChange={handleAdditionalDocsUpload}
+                    multiple
+                    className="hidden"
+                  />
+                </div>
+                <p className="mt-2 text-sm text-gray-500">
+                  PDF, Word, or image files, max 5MB each
+                </p>
+              </div>
               
+              {/* Document List */}
               {additionalDocs.length > 0 && (
-                <div className="mb-4 space-y-2">
-                  {additionalDocs.map((doc, index) => (
-                    <div key={index} className="flex items-center justify-between bg-gray-50 p-2 rounded">
-                      <span className="text-sm text-gray-700">{doc.name}</span>
-                      <button
-                        type="button"
-                        onClick={() => removeDocument(index)}
-                        className="text-red-600 hover:text-red-800 text-sm"
-                      >
-                        Remove
-                      </button>
-                    </div>
-                  ))}
+                <div className="mt-4">
+                  <h3 className="text-sm font-medium text-gray-700 mb-2">Attached Documents:</h3>
+                  <ul className="space-y-2">
+                    {additionalDocs.map((doc, index) => (
+                      <li key={index} className="flex justify-between items-center bg-gray-50 p-2 rounded">
+                        <span className="text-sm text-gray-600 truncate flex-1 mr-2">{doc.name}</span>
+                        <button
+                          type="button"
+                          onClick={() => removeDocument(index)}
+                          className="text-red-600 hover:text-red-800 text-sm"
+                        >
+                          Remove
+                        </button>
+                      </li>
+                    ))}
+                  </ul>
                 </div>
               )}
-              
-              <input
-                type="file"
-                accept=".pdf,.docx,.doc,.jpg,.jpeg,.png"
-                multiple
-                onChange={handleAdditionalDocsUpload}
-                className="hidden"
-                id="additional-docs-upload"
-              />
-              <button
-                type="button"
-                onClick={() => document.getElementById('additional-docs-upload')?.click()}
-                className="px-4 py-2 border border-gray-300 rounded-md hover:bg-gray-50"
-              >
-                Add Documents
-              </button>
             </div>
           </div>
         </div>
 
         {/* Submit Button */}
-        <div className="bg-white p-6 rounded-lg shadow-sm border">
-          <div className="flex justify-between items-center">
-            <div>
-              <p className="text-sm text-gray-600">
-                By submitting this application, you agree that the information provided is accurate.
-              </p>
-            </div>
-            <div className="flex space-x-4">
-              <button
-                type="button"
-                onClick={() => navigate(-1)}
-                className="px-6 py-3 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50"
-              >
-                Cancel
-              </button>
-              <button
-                type="submit"
-                disabled={submitting}
-                className="px-6 py-3 bg-emerald-600 text-white rounded-md hover:bg-emerald-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center"
-              >
-                {submitting ? (
-                  <>
-                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
-                    Submitting...
-                  </>
-                ) : (
-                  'Submit Application'
-                )}
-              </button>
-            </div>
-          </div>
+        <div className="flex justify-end space-x-4">
+          <button
+            type="button"
+            onClick={() => navigate(-1)}
+            className="px-6 py-3 border border-gray-300 text-gray-700 rounded-md hover:bg-gray-50 transition-colors"
+          >
+            Cancel
+          </button>
+          <button
+            type="submit"
+            disabled={submitting}
+            className={`px-6 py-3 text-white rounded-md transition-colors ${
+              submitting 
+                ? 'bg-gray-400 cursor-not-allowed' 
+                : 'bg-emerald-600 hover:bg-emerald-700'
+            }`}
+          >
+            {submitting ? (
+              <div className="flex items-center">
+                <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin mr-2"></div>
+                Submitting...
+              </div>
+            ) : (
+              'Submit Application'
+            )}
+          </button>
         </div>
       </form>
     </div>

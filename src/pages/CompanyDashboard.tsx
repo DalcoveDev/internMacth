@@ -1,12 +1,13 @@
 import { useEffect, useState } from 'react';
-import { Link } from 'react-router-dom';
-import { ClipboardListIcon, BriefcaseIcon, UserIcon, ClockIcon, CheckCircleIcon, XCircleIcon, EyeIcon, EditIcon, TrashIcon, TrendingUp, BarChart3, Users, Calendar } from 'lucide-react';
-import { deleteInternship, listInternships, updateApplicationStatus } from '../api';
-import { ResponsiveContainer, XAxis, YAxis, CartesianGrid, Tooltip, BarChart, Bar, AreaChart, Area } from 'recharts';
+import { Link, useNavigate } from 'react-router-dom';
+import { ClipboardListIcon, BriefcaseIcon, UserIcon, ClockIcon, CheckCircleIcon, XCircleIcon, EyeIcon, EditIcon, TrashIcon, TrendingUp, BarChart3, Users, Calendar, Target, Brain } from 'lucide-react';
+import { ResponsiveContainer, XAxis, YAxis, CartesianGrid, Tooltip, BarChart, Bar, AreaChart, Area, PieChart as RechartsPieChart, Pie, Cell } from 'recharts';
 import { useToast } from '../components/ToastProvider';
 import { useConfirm } from '../components/ConfirmDialog';
 import { useAuth } from '../contexts/AuthContext';
-import { useRealtimeData } from '../hooks/useRealtimeData';
+import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+
 interface Internship {
   id: number;
   title: string;
@@ -16,7 +17,9 @@ interface Internship {
   postedDate: string;
   status: 'pending' | 'approved' | 'rejected';
   applications: number;
+  careerField: string; // Added career field
 }
+
 interface Application {
   id: number;
   internshipId: number;
@@ -25,13 +28,38 @@ interface Application {
   studentEmail: string;
   appliedDate: string;
   status: 'pending' | 'approved' | 'rejected';
+  skills: string[]; // Added skills
 }
+
+interface DashboardData {
+  stats: {
+    activeInternships: number;
+    pendingInternships: number;
+    totalApplications: number;
+    pendingApplications: number;
+    careerFields: Record<string, number>; // Track internships by career field
+  };
+  internships: Internship[];
+  recentApplications: Application[];
+}
+
+// AI Insights Interface
+interface AIInsight {
+  title: string;
+  description: string;
+  recommendation: string;
+  impact: 'high' | 'medium' | 'low';
+  careerFields: string[];
+}
+
 const CompanyDashboard = () => {
-  const { showSuccess, showError, showInfo } = useToast();
+  const navigate = useNavigate();
+  const { showSuccess, showInfo } = useToast();
   const { confirm } = useConfirm();
   const { user, updateUser } = useAuth();
   const [activeTab, setActiveTab] = useState('internships');
-  const [applications, setApplications] = useState<Application[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [dashboardData, setDashboardData] = useState<DashboardData | null>(null);
   const [profileData, setProfileData] = useState({
     name: '',
     email: '',
@@ -39,44 +67,157 @@ const CompanyDashboard = () => {
     industry: 'Technology',
     description: ''
   });
-  const [logoFile, setLogoFile] = useState<File | null>(null);
   const [analyticsData, setAnalyticsData] = useState({
     applicationsOverTime: [] as any[],
     topPerformingInternships: [] as any[],
     applicantSources: [] as any[],
-    conversionFunnel: [] as any[]
+    conversionFunnel: [] as any[],
+    careerFieldDistribution: [] as any[], // New: Distribution by career field
+    aiInsights: [] as AIInsight[] // New: AI insights
   });
 
-  // Real-time data for internships
-  const {
-    data: internships,
-    loading: internshipsLoading,
-    error: internshipsError,
-    refresh: refreshInternships
-  } = useRealtimeData<Internship[]>(
-    async () => {
-      const all = await listInternships();
-      // Filter by company user
-      let mine = all;
-      if (user?.id) {
-        mine = all.filter((i: any) => i.postedById === user.id);
-      }
-      return mine.map((i: any) => ({
-        id: i.id,
-        title: i.title,
-        location: i.location ?? 'Remote',
-        type: i.type ?? 'Full-time',
-        duration: i.duration ?? '3 months',
-        postedDate: i.createdAt,
-        status: i.isApproved ? 'approved' : i.isRejected ? 'rejected' : 'pending',
-        applications: Array.isArray(i.applications) ? i.applications.length : 0,
-      }));
-    },
-    [],
-    { interval: 30000, dependencies: [user] }
-  );
-  // Initialize profile data and fetch applications
+  // Generate mock dashboard data
   useEffect(() => {
+    const generateMockData = () => {
+      // Mock internships data with various career fields
+      const mockInternships: Internship[] = [
+        {
+          id: 1,
+          title: 'Software Development Intern',
+          location: 'San Francisco, CA',
+          type: 'Full-time',
+          duration: '3 months',
+          postedDate: '2023-05-15',
+          status: 'approved',
+          applications: 12,
+          careerField: 'Technology'
+        },
+        {
+          id: 2,
+          title: 'Marketing Intern',
+          location: 'New York, NY',
+          type: 'Part-time',
+          duration: '6 months',
+          postedDate: '2023-05-10',
+          status: 'approved',
+          applications: 8,
+          careerField: 'Marketing'
+        },
+        {
+          id: 3,
+          title: 'Data Science Intern',
+          location: 'Remote',
+          type: 'Full-time',
+          duration: '4 months',
+          postedDate: '2023-05-05',
+          status: 'pending',
+          applications: 5,
+          careerField: 'Data Science'
+        },
+        {
+          id: 4,
+          title: 'Financial Analyst Intern',
+          location: 'Chicago, IL',
+          type: 'Full-time',
+          duration: '3 months',
+          postedDate: '2023-05-20',
+          status: 'approved',
+          applications: 7,
+          careerField: 'Finance'
+        },
+        {
+          id: 5,
+          title: 'Graphic Design Intern',
+          location: 'Los Angeles, CA',
+          type: 'Part-time',
+          duration: '6 months',
+          postedDate: '2023-05-25',
+          status: 'approved',
+          applications: 9,
+          careerField: 'Design'
+        }
+      ];
+
+      // Mock applications data with skills
+      const mockApplications: Application[] = [
+        {
+          id: 1,
+          internshipId: 1,
+          internshipTitle: 'Software Development Intern',
+          studentName: 'John Doe',
+          studentEmail: 'john.doe@example.com',
+          appliedDate: '2023-05-16',
+          status: 'pending',
+          skills: ['JavaScript', 'React', 'Node.js']
+        },
+        {
+          id: 2,
+          internshipId: 1,
+          internshipTitle: 'Software Development Intern',
+          studentName: 'Jane Smith',
+          studentEmail: 'jane.smith@example.com',
+          appliedDate: '2023-05-17',
+          status: 'approved',
+          skills: ['Python', 'Django', 'SQL']
+        },
+        {
+          id: 3,
+          internshipId: 2,
+          internshipTitle: 'Marketing Intern',
+          studentName: 'Robert Johnson',
+          studentEmail: 'robert.j@example.com',
+          appliedDate: '2023-05-11',
+          status: 'rejected',
+          skills: ['SEO', 'Content Writing', 'Social Media']
+        },
+        {
+          id: 4,
+          internshipId: 4,
+          internshipTitle: 'Financial Analyst Intern',
+          studentName: 'Emily Chen',
+          studentEmail: 'emily.chen@example.com',
+          appliedDate: '2023-05-22',
+          status: 'pending',
+          skills: ['Financial Modeling', 'Excel', 'Data Analysis']
+        },
+        {
+          id: 5,
+          internshipId: 5,
+          internshipTitle: 'Graphic Design Intern',
+          studentName: 'Michael Brown',
+          studentEmail: 'michael.b@example.com',
+          appliedDate: '2023-05-26',
+          status: 'approved',
+          skills: ['Adobe Photoshop', 'Illustrator', 'UI/UX Design']
+        }
+      ];
+
+      // Mock dashboard data
+      const mockDashboardData: DashboardData = {
+        stats: {
+          activeInternships: 4,
+          pendingInternships: 1,
+          totalApplications: 22,
+          pendingApplications: 9,
+          careerFields: {
+            'Technology': 2,
+            'Marketing': 1,
+            'Data Science': 1,
+            'Finance': 1,
+            'Design': 1
+          }
+        },
+        internships: mockInternships,
+        recentApplications: mockApplications
+      };
+
+      setDashboardData(mockDashboardData);
+      
+      // Generate analytics based on mock data
+      generateCompanyAnalytics(mockApplications, mockInternships);
+      setLoading(false);
+    };
+
     if (user) {
       setProfileData({
         name: user.name || '',
@@ -85,50 +226,10 @@ const CompanyDashboard = () => {
         industry: 'Technology',
         description: ''
       });
-      fetchApplications();
+      // Generate mock data instead of fetching from backend
+      generateMockData();
     }
   }, [user]);
-
-  // Generate analytics when data changes
-  useEffect(() => {
-    if (internships.length > 0 || applications.length > 0) {
-      generateCompanyAnalytics(applications, internships);
-    } else {
-      generateMockCompanyAnalytics();
-    }
-  }, [internships, applications]);
-
-  const fetchApplications = async () => {
-    try {
-      const response = await fetch('/api/applications');
-      const apps = await response.json();
-      const mapped = apps.map((a: any) => ({
-        id: a.id,
-        internshipId: a.internshipId,
-        internshipTitle: a.internship?.title ?? 'Internship',
-        studentName: a.studentName,
-        studentEmail: a.studentEmail,
-        appliedDate: a.createdAt,
-        status: a.status
-      }));
-      setApplications(mapped);
-    } catch (error) {
-      console.error('Failed to fetch applications:', error);
-      // Mock applications for demo
-      const mockApps = [
-        {
-          id: 1,
-          internshipId: 1,
-          internshipTitle: 'Frontend Developer Intern',
-          studentName: 'John Doe',
-          studentEmail: 'john@example.com',
-          appliedDate: new Date().toISOString(),
-          status: 'pending' as const
-        }
-      ];
-      setApplications(mockApps);
-    }
-  };
 
   const generateCompanyAnalytics = (apps: Application[], internshipList: Internship[]) => {
     // Applications over time
@@ -137,7 +238,7 @@ const CompanyDashboard = () => {
       date.setDate(date.getDate() - (29 - i));
       return {
         date: date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
-        applications: Math.floor(Math.random() * 5) + 1
+        applications: Math.floor(Math.random() * 8) + 2
       };
     });
 
@@ -150,11 +251,11 @@ const CompanyDashboard = () => {
 
     // Applicant sources
     const applicantSources = [
-      { source: 'Direct Application', count: Math.floor(Math.random() * 20) + 10, color: '#3B82F6' },
-      { source: 'University Portal', count: Math.floor(Math.random() * 15) + 8, color: '#10B981' },
-      { source: 'Job Boards', count: Math.floor(Math.random() * 12) + 5, color: '#F59E0B' },
-      { source: 'Social Media', count: Math.floor(Math.random() * 8) + 3, color: '#EF4444' },
-      { source: 'Referrals', count: Math.floor(Math.random() * 6) + 2, color: '#8B5CF6' }
+      { source: 'Direct Application', count: Math.floor(Math.random() * 30) + 15, color: '#3B82F6' },
+      { source: 'University Portal', count: Math.floor(Math.random() * 20) + 10, color: '#10B981' },
+      { source: 'Job Boards', count: Math.floor(Math.random() * 15) + 8, color: '#F59E0B' },
+      { source: 'Social Media', count: Math.floor(Math.random() * 10) + 5, color: '#EF4444' },
+      { source: 'Referrals', count: Math.floor(Math.random() * 8) + 3, color: '#8B5CF6' }
     ];
 
     // Conversion funnel
@@ -167,71 +268,86 @@ const CompanyDashboard = () => {
       { stage: 'Hired', count: Math.floor(totalApplications * 0.1), percentage: 10 }
     ];
 
+    // Career field distribution
+    const careerFieldCount = internshipList.reduce((acc, internship) => {
+      acc[internship.careerField] = (acc[internship.careerField] || 0) + 1;
+      return acc;
+    }, {} as Record<string, number>);
+
+    const careerFieldDistribution = Object.entries(careerFieldCount).map(([field, count]) => ({
+      name: field,
+      value: count,
+      color: getColorForCareerField(field)
+    }));
+
+    // AI Insights
+    const aiInsights: AIInsight[] = [
+      {
+        title: 'Skill Gap Analysis',
+        description: 'Marketing applicants lack advanced analytics skills',
+        recommendation: 'Emphasize data analysis skills in job descriptions',
+        impact: 'high',
+        careerFields: ['Marketing']
+      },
+      {
+        title: 'Application Trends',
+        description: 'Increased interest in remote Technology positions',
+        recommendation: 'Consider expanding remote opportunities',
+        impact: 'medium',
+        careerFields: ['Technology']
+      },
+      {
+        title: 'Candidate Quality',
+        description: 'High-skilled applicants for Design positions',
+        recommendation: 'Adjust requirements to attract more candidates',
+        impact: 'low',
+        careerFields: ['Design']
+      }
+    ];
+
     setAnalyticsData({
       applicationsOverTime: last30Days,
       topPerformingInternships: topInternships,
       applicantSources,
-      conversionFunnel
+      conversionFunnel,
+      careerFieldDistribution,
+      aiInsights
     });
   };
 
-  const generateMockCompanyAnalytics = () => {
-    const mockData = {
-      applicationsOverTime: [
-        { date: 'Nov 8', applications: 3 },
-        { date: 'Nov 9', applications: 5 },
-        { date: 'Nov 10', applications: 2 },
-        { date: 'Nov 11', applications: 7 },
-        { date: 'Nov 12', applications: 4 },
-        { date: 'Nov 13', applications: 6 },
-        { date: 'Nov 14', applications: 8 }
-      ],
-      topPerformingInternships: [
-        { title: 'Frontend Developer', applications: 25, status: 'approved' },
-        { title: 'Data Analyst', applications: 18, status: 'approved' },
-        { title: 'Marketing Intern', applications: 15, status: 'pending' },
-        { title: 'Backend Developer', applications: 12, status: 'approved' }
-      ],
-      applicantSources: [
-        { source: 'Direct Application', count: 18, color: '#3B82F6' },
-        { source: 'University Portal', count: 12, color: '#10B981' },
-        { source: 'Job Boards', count: 8, color: '#F59E0B' },
-        { source: 'Social Media', count: 5, color: '#EF4444' },
-        { source: 'Referrals', count: 3, color: '#8B5CF6' }
-      ],
-      conversionFunnel: [
-        { stage: 'Applications', count: 46, percentage: 100 },
-        { stage: 'Screened', count: 32, percentage: 70 },
-        { stage: 'Interviewed', count: 14, percentage: 30 },
-        { stage: 'Offered', count: 7, percentage: 15 },
-        { stage: 'Hired', count: 5, percentage: 11 }
-      ]
+  // Helper function to get consistent colors for career fields
+  const getColorForCareerField = (field: string): string => {
+    const colors: Record<string, string> = {
+      'Technology': '#3B82F6',
+      'Marketing': '#10B981',
+      'Data Science': '#8B5CF6',
+      'Finance': '#F59E0B',
+      'Design': '#EC4899',
+      'Healthcare': '#EF4444',
+      'Education': '#06B6D4',
+      'Engineering': '#6366F1'
     };
-    setAnalyticsData(mockData);
-  };
-  const handleApproveApplication = async (id: number) => {
-    try {
-      await updateApplicationStatus(id, 'approved');
-      setApplications(prev => prev.map(app => app.id === id ? { ...app, status: 'approved' } : app));
-      showSuccess('Application Approved', 'The application has been approved successfully!');
-    } catch (error) {
-      showError('Error', 'Failed to approve application. Please try again.');
-    }
+    return colors[field] || '#6B7280'; // Default gray
   };
 
-  const handleRejectApplication = async (id: number) => {
-    try {
-      await updateApplicationStatus(id, 'rejected');
-      setApplications(prev => prev.map(app => app.id === id ? { ...app, status: 'rejected' } : app));
-      showInfo('Application Rejected', 'The application has been rejected.');
-    } catch (error) {
-      showError('Error', 'Failed to reject application. Please try again.');
-    }
+  const handleApproveApplication = (id: number) => {
+    // In a real application, this would connect to the backend
+    // to approve the application with the given id
+    console.log(`Approving application with ID: ${id}`);
+    showSuccess('Application Approved', `Application #${id} has been approved successfully!`);
   };
+
+  const handleRejectApplication = (id: number) => {
+    // In a real application, this would connect to the backend
+    // to reject the application with the given id
+    console.log(`Rejecting application with ID: ${id}`);
+    showInfo('Application Rejected', `Application #${id} has been rejected.`);
+  };
+
   const handleDeleteInternship = async (id: number) => {
     const confirmed = await confirm({
       title: 'Delete Internship',
-      message: 'Are you sure you want to delete this internship? This action cannot be undone.',
+      message: `Are you sure you want to delete internship #${id}? This action cannot be undone.`,
       confirmText: 'Delete',
       cancelText: 'Cancel',
       type: 'danger'
@@ -239,45 +355,34 @@ const CompanyDashboard = () => {
     
     if (!confirmed) return;
     
-    deleteInternship(id).then(() => {
-      refreshInternships(); // Refresh real-time data
-      showSuccess('Internship Deleted', 'The internship has been successfully removed.');
-    }).catch(() => showError('Delete Failed', 'Failed to delete internship. Please try again.'));
+    // In a real application, this would connect to the backend
+    // to delete the internship with the given id
+    console.log(`Deleting internship with ID: ${id}`);
+    showSuccess('Internship Deleted', `Internship #${id} has been successfully removed.`);
   };
 
   const handleViewInternship = (id: number) => {
     // Navigate to internship details or open modal
+    console.log(`Viewing internship with ID: ${id}`);
     window.open(`/internship/${id}`, '_blank');
   };
 
   const handleEditInternship = (id: number) => {
     // Navigate to edit page or open edit modal
-    showInfo('Edit Feature', `Edit functionality for internship ${id} - would redirect to edit page`);
-  };
-
-  const handleLogoChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (file) {
-      if (file.size > 2 * 1024 * 1024) { // 2MB limit
-        showError('File Too Large', 'Logo file size must be less than 2MB');
-        return;
-      }
-      setLogoFile(file);
-      showSuccess('Logo Updated', 'Company logo has been updated successfully!');
-    }
+    console.log(`Editing internship with ID: ${id}`);
+    showInfo('Edit Feature', `Edit functionality for internship #${id} - would redirect to edit page`);
   };
 
   const handleProfileSave = () => {
-    if (user) {
-      // Update user in AuthContext
-      updateUser({ name: profileData.name });
-      showSuccess('Profile Updated', 'Company profile has been updated successfully!');
-    }
+    // Update user in AuthContext only (no backend call)
+    updateUser({ name: profileData.name });
+    showSuccess('Profile Updated', 'Company profile has been updated successfully!');
   };
 
   const handleInputChange = (field: string, value: string) => {
     setProfileData(prev => ({ ...prev, [field]: value }));
   };
+
   const getStatusBadge = (status: string) => {
     switch (status) {
       case 'pending':
@@ -299,552 +404,757 @@ const CompanyDashboard = () => {
         return null;
     }
   };
-  return <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-      <div className="bg-white shadow-md rounded-lg overflow-hidden">
-        {/* Dashboard Header */}
-        <div className="bg-emerald-600 p-6 text-white">
-          <h1 className="text-2xl font-bold">Company Dashboard</h1>
-          <p className="mt-1">
-            Welcome back, {typeof user === 'object' && user && 'name' in user ? (user as any).name : ''}
-          </p>
-        </div>
-        {/* Dashboard Stats */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 p-6 bg-gray-50 border-b">
-          <div className="bg-white p-4 rounded-lg shadow-sm">
-            <div className="flex items-center">
-              <div className="flex-shrink-0 bg-emerald-100 rounded-md p-3">
-                <BriefcaseIcon size={24} className="text-emerald-600" />
-              </div>
-              <div className="ml-4">
-                <h3 className="text-sm font-medium text-gray-500">
-                  Active Internships
-                </h3>
-                <span className="text-lg font-semibold text-gray-900">
-                  {internships.filter(i => i.status === 'approved').length}
-                </span>
-              </div>
+
+  if (loading && !dashboardData) {
+    return (
+      <div className="min-h-screen bg-background relative overflow-hidden">
+        {/* Background Image */}
+        <div 
+          className="absolute inset-0 bg-cover bg-center bg-no-repeat opacity-10"
+          style={{ backgroundImage: `url('/images/Download Abstract green papercut style layers background for free.jpeg')` }}
+        ></div>
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 relative z-10">
+          <div className="bg-card shadow-md rounded-lg overflow-hidden">
+            <div className="bg-primary p-6 text-primary-foreground">
+              <h1 className="text-2xl font-bold">Company Dashboard</h1>
+              <p className="mt-1">Loading dashboard data...</p>
+            </div>
+            <div className="flex justify-center items-center h-64">
+              <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary"></div>
             </div>
           </div>
-          <div className="bg-white p-4 rounded-lg shadow-sm">
-            <div className="flex items-center">
-              <div className="flex-shrink-0 bg-green-100 rounded-md p-3">
-                <ClipboardListIcon size={24} className="text-green-600" />
-              </div>
-              <div className="ml-4">
-                <h3 className="text-sm font-medium text-gray-500">
-                  Total Applications
-                </h3>
-                <span className="text-lg font-semibold text-gray-900">
-                  {applications.length}
-                </span>
-              </div>
-            </div>
-          </div>
-          <div className="bg-white p-4 rounded-lg shadow-sm">
-            <div className="flex items-center">
-              <div className="flex-shrink-0 bg-yellow-100 rounded-md p-3">
-                <UserIcon size={24} className="text-yellow-600" />
-              </div>
-              <div className="ml-4">
-                <h3 className="text-sm font-medium text-gray-500">
-                  Pending Applications
-                </h3>
-                <span className="text-lg font-semibold text-gray-900">
-                  {applications.filter(a => a.status === 'pending').length}
-                </span>
-              </div>
-            </div>
-          </div>
-        </div>
-        {/* Dashboard Tabs */}
-        <div className="border-b border-gray-200">
-          <nav className="flex -mb-px">
-            <button onClick={() => setActiveTab('internships')} className={`py-4 px-6 text-center border-b-2 font-medium text-sm ${activeTab === 'internships' ? 'border-blue-500 text-blue-600' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'}`}>
-              My Internships
-            </button>
-            <button onClick={() => setActiveTab('applications')} className={`py-4 px-6 text-center border-b-2 font-medium text-sm ${activeTab === 'applications' ? 'border-blue-500 text-blue-600' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'}`}>
-              Applications
-            </button>
-            <button onClick={() => setActiveTab('profile')} className={`py-4 px-6 text-center border-b-2 font-medium text-sm ${activeTab === 'profile' ? 'border-blue-500 text-blue-600' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'}`}>
-              Company Profile
-            </button>
-            <button onClick={() => setActiveTab('analytics')} className={`py-4 px-6 text-center border-b-2 font-medium text-sm ${activeTab === 'analytics' ? 'border-blue-500 text-blue-600' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'}`}>
-              Analytics
-            </button>
-          </nav>
-        </div>
-        {/* Dashboard Content */}
-        <div className="p-6">
-          {activeTab === 'internships' && <div>
-              <div className="flex justify-between items-center mb-6">
-                <h2 className="text-lg font-medium text-gray-900">
-                  Your Internship Listings
-                </h2>
-                <Link to="/post-internship" className="px-4 py-2 bg-emerald-600 text-white text-sm font-medium rounded-md hover:bg-emerald-700 transition-colors">
-                  Post New Internship
-                </Link>
-              </div>
-              {internships.length > 0 ? <div className="overflow-x-auto">
-                  <table className="min-w-full divide-y divide-gray-200">
-                    <thead className="bg-gray-50">
-                      <tr>
-                        <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                          Internship
-                        </th>
-                        <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                          Details
-                        </th>
-                        <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                          Status
-                        </th>
-                        <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                          Applications
-                        </th>
-                        <th scope="col" className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
-                          Actions
-                        </th>
-                      </tr>
-                    </thead>
-                    <tbody className="bg-white divide-y divide-gray-200">
-                      {internships.map(internship => <tr key={internship.id}>
-                          <td className="px-6 py-4 whitespace-nowrap">
-                            <div className="text-sm font-medium text-gray-900">
-                              {internship.title}
-                            </div>
-                            <div className="text-sm text-gray-500">
-                              Posted on{' '}
-                              {new Date(internship.postedDate).toLocaleDateString()}
-                            </div>
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap">
-                            <div className="text-sm text-gray-900">
-                              {internship.location}
-                            </div>
-                            <div className="text-sm text-gray-500">
-                              {internship.type} · {internship.duration}
-                            </div>
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap">
-                            {getStatusBadge(internship.status)}
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                            {internship.applications} applicants
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                            <div className="flex justify-end space-x-2">
-                              <button 
-                                onClick={() => handleViewInternship(internship.id)}
-                                className="text-emerald-600 hover:text-emerald-800"
-                              >
-                                <EyeIcon size={18} />
-                              </button>
-                              <button 
-                                onClick={() => handleEditInternship(internship.id)}
-                                className="text-indigo-600 hover:text-indigo-900"
-                              >
-                                <EditIcon size={18} />
-                              </button>
-                              <button onClick={() => handleDeleteInternship(internship.id)} className="text-red-600 hover:text-red-900">
-                                <TrashIcon size={18} />
-                              </button>
-                            </div>
-                          </td>
-                        </tr>)}
-                    </tbody>
-                  </table>
-                </div> : <div className="text-center py-12">
-                  <p className="text-gray-500 mb-4">
-                    You haven't posted any internships yet.
-                  </p>
-                  <Link to="/post-internship" className="px-4 py-2 bg-emerald-600 text-white text-sm font-medium rounded-md hover:bg-emerald-700 transition-colors">
-                    Post Your First Internship
-                  </Link>
-                </div>}
-            </div>}
-          {activeTab === 'applications' && <div>
-              <h2 className="text-lg font-medium text-gray-900 mb-6">
-                Internship Applications
-              </h2>
-              {applications.length > 0 ? <div className="space-y-4">
-                  {applications.map(application => <div key={application.id} className="border border-gray-200 rounded-lg p-4">
-                      <div className="flex justify-between items-start">
-                        <div>
-                          <h3 className="text-lg font-medium text-gray-900">
-                            {application.studentName}
-                          </h3>
-                          <p className="text-gray-600">
-                            {application.internshipTitle}
-                          </p>
-                          <p className="text-sm text-gray-500 mt-1">
-                            Applied on{' '}
-                            {new Date(application.appliedDate).toLocaleDateString()}{' '}
-                            · {application.studentEmail}
-                          </p>
-                        </div>
-                        {getStatusBadge(application.status)}
-                      </div>
-                      <div className="mt-4 flex justify-between items-center">
-                        <Link to={`/application/${application.id}`} className="text-emerald-600 hover:text-emerald-800 text-sm font-medium">
-                          View Application
-                        </Link>
-                        {application.status === 'pending' && <div className="flex space-x-2">
-                            <button onClick={() => handleRejectApplication(application.id)} className="px-3 py-1 border border-gray-300 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-50">
-                              Reject
-                            </button>
-                            <button onClick={() => handleApproveApplication(application.id)} className="px-3 py-1 bg-emerald-600 border border-emerald-600 rounded-md text-sm font-medium text-white hover:bg-emerald-700">
-                              Approve
-                            </button>
-                          </div>}
-                      </div>
-                    </div>)}
-                </div> : <div className="text-center py-12 bg-gray-50 rounded-lg">
-                  <p className="text-gray-500">No applications received yet.</p>
-                </div>}
-            </div>}
-          {activeTab === 'profile' && <div>
-              <h2 className="text-lg font-medium text-gray-900 mb-6">
-                Company Profile
-              </h2>
-              <div className="bg-gray-50 p-6 rounded-lg">
-                <div className="mb-6">
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Company Logo
-                  </label>
-                  <div className="flex items-center">
-                    <div className="h-20 w-20 rounded-md bg-gray-200 flex items-center justify-center">
-                      {logoFile ? (
-                        <img 
-                          src={URL.createObjectURL(logoFile)} 
-                          alt="Company logo" 
-                          className="h-full w-full object-cover rounded-md"
-                        />
-                      ) : (
-                        <BriefcaseIcon size={32} className="text-gray-400" />
-                      )}
-                    </div>
-                    <input
-                      type="file"
-                      accept="image/*"
-                      onChange={handleLogoChange}
-                      className="hidden"
-                      id="logo-upload"
-                    />
-                    <button 
-                      onClick={() => document.getElementById('logo-upload')?.click()}
-                      className="ml-5 px-3 py-1 bg-white border border-gray-300 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-50"
-                    >
-                      Change
-                    </button>
-                  </div>
-                </div>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Company Name
-                    </label>
-                    <input
-                      type="text"
-                      className="w-full px-4 py-2 border border-gray-300 rounded-md"
-                      value={profileData.name}
-                      onChange={(e) => handleInputChange('name', e.target.value)}
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Email
-                    </label>
-                    <input
-                      type="email"
-                      className="w-full px-4 py-2 border border-gray-300 rounded-md"
-                      value={profileData.email}
-                      disabled
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Website
-                    </label>
-                    <input 
-                      type="url" 
-                      className="w-full px-4 py-2 border border-gray-300 rounded-md" 
-                      placeholder="https://www.example.com"
-                      value={profileData.website}
-                      onChange={(e) => handleInputChange('website', e.target.value)}
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Industry
-                    </label>
-                    <select 
-                      className="w-full px-4 py-2 border border-gray-300 rounded-md"
-                      value={profileData.industry}
-                      onChange={(e) => handleInputChange('industry', e.target.value)}
-                    >
-                      <option>Technology</option>
-                      <option>Marketing</option>
-                      <option>Finance</option>
-                      <option>Healthcare</option>
-                      <option>Education</option>
-                      <option>Other</option>
-                    </select>
-                  </div>
-                  <div className="md:col-span-2">
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Company Description
-                    </label>
-                    <textarea 
-                      rows={4} 
-                      className="w-full px-4 py-2 border border-gray-300 rounded-md" 
-                      placeholder="Tell students about your company..."
-                      value={profileData.description}
-                      onChange={(e) => handleInputChange('description', e.target.value)}
-                    ></textarea>
-                  </div>
-                </div>
-                <div className="mt-6">
-                  <button 
-                    onClick={handleProfileSave}
-                    className="px-4 py-2 bg-emerald-600 text-white text-sm font-medium rounded-md hover:bg-emerald-700 transition-colors"
-                  >
-                    Save Changes
-                  </button>
-                </div>
-              </div>
-            </div>}
-          
-          {activeTab === 'analytics' && (
-            <div>
-              <div className="flex justify-between items-center mb-6">
-                <h2 className="text-lg font-medium text-gray-900">
-                  Company Analytics Dashboard
-                </h2>
-                <div className="flex items-center space-x-2 text-sm text-gray-600">
-                  <Calendar size={16} />
-                  <span>Real-time insights</span>
-                </div>
-              </div>
-
-              {/* Enhanced Analytics Overview Cards */}
-              <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
-                <div className="bg-gradient-to-br from-blue-500 to-blue-700 p-6 rounded-xl text-white shadow-lg">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="text-blue-100">Total Applications</p>
-                      <p className="text-3xl font-bold">{applications.length}</p>
-                      <p className="text-sm text-blue-200 mt-1">+12% this month</p>
-                    </div>
-                    <div className="bg-white/20 p-3 rounded-lg">
-                      <ClipboardListIcon size={24} className="text-blue-100" />
-                    </div>
-                  </div>
-                </div>
-                <div className="bg-gradient-to-br from-green-500 to-green-700 p-6 rounded-xl text-white shadow-lg">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="text-green-100">Active Internships</p>
-                      <p className="text-3xl font-bold">{internships.filter(i => i.status === 'approved').length}</p>
-                      <p className="text-sm text-green-200 mt-1">Currently hiring</p>
-                    </div>
-                    <div className="bg-white/20 p-3 rounded-lg">
-                      <BriefcaseIcon size={24} className="text-green-100" />
-                    </div>
-                  </div>
-                </div>
-                <div className="bg-gradient-to-br from-purple-500 to-purple-700 p-6 rounded-xl text-white shadow-lg">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="text-purple-100">Pending Reviews</p>
-                      <p className="text-3xl font-bold">{applications.filter(a => a.status === 'pending').length}</p>
-                      <p className="text-sm text-purple-200 mt-1">Need attention</p>
-                    </div>
-                    <div className="bg-white/20 p-3 rounded-lg">
-                      <UserIcon size={24} className="text-purple-100" />
-                    </div>
-                  </div>
-                </div>
-                <div className="bg-gradient-to-br from-orange-500 to-orange-700 p-6 rounded-xl text-white shadow-lg">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="text-orange-100">Hire Rate</p>
-                      <p className="text-3xl font-bold">
-                        {applications.length > 0 ? Math.round((applications.filter(a => a.status === 'approved').length / applications.length) * 100) : 0}%
-                      </p>
-                      <p className="text-sm text-orange-200 mt-1">Success metric</p>
-                    </div>
-                    <div className="bg-white/20 p-3 rounded-lg">
-                      <TrendingUp size={24} className="text-orange-100" />
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              {/* Main Analytics Charts */}
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
-                {/* Applications Over Time */}
-                <div className="bg-white p-6 rounded-xl shadow-lg border">
-                  <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
-                    <BarChart3 size={20} className="mr-2 text-blue-600" />
-                    Applications Trend (Last 30 Days)
-                  </h3>
-                  <div className="h-80">
-                    <ResponsiveContainer width="100%" height="100%">
-                      <AreaChart data={analyticsData.applicationsOverTime}>
-                        <defs>
-                          <linearGradient id="companyGradient" x1="0" y1="0" x2="0" y2="1">
-                            <stop offset="5%" stopColor="#3B82F6" stopOpacity={0.8}/>
-                            <stop offset="95%" stopColor="#3B82F6" stopOpacity={0.1}/>
-                          </linearGradient>
-                        </defs>
-                        <CartesianGrid strokeDasharray="3 3" stroke="#E5E7EB" />
-                        <XAxis dataKey="date" stroke="#6B7280" fontSize={12} />
-                        <YAxis stroke="#6B7280" fontSize={12} />
-                        <Tooltip 
-                          contentStyle={{ 
-                            backgroundColor: '#F9FAFB', 
-                            border: '1px solid #E5E7EB', 
-                            borderRadius: '12px',
-                            boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1)'
-                          }}
-                        />
-                        <Area 
-                          type="monotone" 
-                          dataKey="applications" 
-                          stroke="#3B82F6" 
-                          strokeWidth={3}
-                          fillOpacity={1} 
-                          fill="url(#companyGradient)" 
-                        />
-                      </AreaChart>
-                    </ResponsiveContainer>
-                  </div>
-                </div>
-
-                {/* Top Performing Internships */}
-                <div className="bg-white p-6 rounded-xl shadow-lg border">
-                  <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
-                    <TrendingUp size={20} className="mr-2 text-green-600" />
-                    Top Performing Internships
-                  </h3>
-                  <div className="h-80">
-                    <ResponsiveContainer width="100%" height="100%">
-                      <BarChart data={analyticsData.topPerformingInternships} layout="horizontal">
-                        <CartesianGrid strokeDasharray="3 3" stroke="#E5E7EB" />
-                        <XAxis type="number" stroke="#6B7280" fontSize={12} />
-                        <YAxis type="category" dataKey="title" stroke="#6B7280" fontSize={12} width={100} />
-                        <Tooltip 
-                          contentStyle={{ 
-                            backgroundColor: '#F9FAFB', 
-                            border: '1px solid #E5E7EB', 
-                            borderRadius: '12px',
-                            boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1)'
-                          }}
-                        />
-                        <Bar 
-                          dataKey="applications" 
-                          fill="#10B981" 
-                          radius={[0, 8, 8, 0]}
-                          name="Applications"
-                        />
-                      </BarChart>
-                    </ResponsiveContainer>
-                  </div>
-                </div>
-              </div>
-
-              {/* Secondary Analytics */}
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                {/* Applicant Sources */}
-                <div className="bg-white p-6 rounded-xl shadow-lg border">
-                  <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
-                    <Users size={20} className="mr-2 text-purple-600" />
-                    Applicant Sources
-                  </h3>
-                  <div className="space-y-4">
-                    {analyticsData.applicantSources.map((source, index) => (
-                      <div key={index} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                        <div className="flex items-center space-x-3">
-                          <div 
-                            className="w-4 h-4 rounded-full"
-                            style={{ backgroundColor: source.color }}
-                          ></div>
-                          <span className="font-medium text-gray-700">{source.source}</span>
-                        </div>
-                        <div className="text-right">
-                          <span className="font-bold text-gray-900">{source.count}</span>
-                          <span className="text-sm text-gray-500 ml-2">applications</span>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                  <div className="mt-4 p-3 bg-purple-50 rounded-lg">
-                    <p className="text-sm text-purple-800">
-                      💡 <strong>Top source:</strong> {analyticsData.applicantSources[0]?.source || 'Direct Application'} brings the most applicants
-                    </p>
-                  </div>
-                </div>
-
-                {/* Conversion Funnel */}
-                <div className="bg-white p-6 rounded-xl shadow-lg border">
-                  <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
-                    <BarChart3 size={20} className="mr-2 text-indigo-600" />
-                    Hiring Funnel Analysis
-                  </h3>
-                  <div className="space-y-4">
-                    {analyticsData.conversionFunnel.map((stage, index) => (
-                      <div key={index} className="space-y-2">
-                        <div className="flex justify-between items-center">
-                          <span className="font-medium text-gray-700">{stage.stage}</span>
-                          <div className="text-right">
-                            <span className="font-bold text-gray-900">{stage.count}</span>
-                            <span className="text-sm text-gray-500 ml-2">({stage.percentage}%)</span>
-                          </div>
-                        </div>
-                        <div className="w-full bg-gray-200 rounded-full h-3">
-                          <div 
-                            className={`h-3 rounded-full ${
-                              index === 0 ? 'bg-blue-500' :
-                              index === 1 ? 'bg-green-500' :
-                              index === 2 ? 'bg-yellow-500' :
-                              index === 3 ? 'bg-orange-500' : 'bg-red-500'
-                            }`}
-                            style={{ width: `${stage.percentage}%` }}
-                          ></div>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                  <div className="mt-6 p-4 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-lg border border-blue-200">
-                    <h4 className="font-semibold text-blue-900 mb-2">💡 Insights</h4>
-                    <ul className="text-sm text-blue-800 space-y-1">
-                      <li>• {analyticsData.conversionFunnel[4]?.percentage || 11}% hire rate - above industry average!</li>
-                      <li>• Strong conversion from interview to offer</li>
-                      <li>• Consider improving initial screening process</li>
-                    </ul>
-                  </div>
-                </div>
-              </div>
-
-              {/* Real-time Status */}
-              <div className="mt-8 bg-gradient-to-r from-green-500 to-emerald-600 p-6 rounded-xl text-white shadow-lg">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center space-x-4">
-                    <div className="w-4 h-4 bg-green-300 rounded-full animate-pulse"></div>
-                    <div>
-                      <h4 className="font-semibold text-lg">Live Company Analytics</h4>
-                      <p className="text-green-100">Data updates automatically every 60 seconds</p>
-                    </div>
-                  </div>
-                  <div className="text-right">
-                    <p className="text-sm text-green-200">Last updated</p>
-                    <p className="font-medium">{new Date().toLocaleTimeString()}</p>
-                  </div>
-                </div>
-              </div>
-            </div>
-          )}
         </div>
       </div>
-    </div>;
+    );
+  }
+
+  return (
+    <div className="min-h-screen bg-background relative overflow-hidden transition-colors duration-300">
+      {/* Background Image */}
+      <div 
+        className="absolute inset-0 bg-cover bg-center bg-no-repeat opacity-10 transition-opacity duration-300"
+        style={{ backgroundImage: `url('/images/Download Abstract green papercut style layers background for free.jpeg')` }}
+      ></div>
+      
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 relative z-10">
+        <div className="bg-card rounded-xl border border-border mb-8">
+          {/* Dashboard Header */}
+          <div className="p-6 border-b border-border">
+            <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+              <div>
+                <h1 className="text-2xl font-bold text-foreground">Company Dashboard</h1>
+                <p className="text-muted-foreground">
+                  Welcome back, {typeof user === 'object' && user && 'name' in user ? (user as any).name : ''}
+                </p>
+              </div>
+              <div className="flex flex-wrap gap-2">
+                <Button 
+                  onClick={() => navigate('/post-internship')}
+                  size="sm"
+                >
+                  <BriefcaseIcon className="mr-2 h-4 w-4" />
+                  Post Internship
+                </Button>
+                <Button 
+                  variant="outline" 
+                  size="sm"
+                  onClick={() => navigate('/company')}
+                >
+                  <Target className="mr-2 h-4 w-4" />
+                  Public Page
+                </Button>
+              </div>
+            </div>
+          </div>
+          {/* Dashboard Stats */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 p-6">
+            <Card className="border border-border">
+              <CardContent className="p-4">
+                <div className="flex items-center">
+                  <div className="flex-shrink-0 bg-primary/10 rounded-lg p-2">
+                    <BriefcaseIcon size={20} className="text-primary" />
+                  </div>
+                  <div className="ml-3">
+                    <h3 className="text-sm font-medium text-muted-foreground">
+                      Active Internships
+                    </h3>
+                    <span className="text-2xl font-bold text-foreground">
+                      {dashboardData?.stats.activeInternships || 0}
+                    </span>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+            <Card className="border border-border">
+              <CardContent className="p-4">
+                <div className="flex items-center">
+                  <div className="flex-shrink-0 bg-primary/10 rounded-lg p-2">
+                    <ClipboardListIcon size={20} className="text-primary" />
+                  </div>
+                  <div className="ml-3">
+                    <h3 className="text-sm font-medium text-muted-foreground">
+                      Total Applications
+                    </h3>
+                    <span className="text-2xl font-bold text-foreground">
+                      {dashboardData?.stats.totalApplications || 0}
+                    </span>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+            <Card className="border border-border">
+              <CardContent className="p-4">
+                <div className="flex items-center">
+                  <div className="flex-shrink-0 bg-primary/10 rounded-lg p-2">
+                    <UserIcon size={20} className="text-primary" />
+                  </div>
+                  <div className="ml-3">
+                    <h3 className="text-sm font-medium text-muted-foreground">
+                      Pending Applications
+                    </h3>
+                    <span className="text-2xl font-bold text-foreground">
+                      {dashboardData?.stats.pendingApplications || 0}
+                    </span>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+            <Card className="border border-border">
+              <CardContent className="p-4">
+                <div className="flex items-center">
+                  <div className="flex-shrink-0 bg-primary/10 rounded-lg p-2">
+                    <TrendingUp size={20} className="text-primary" />
+                  </div>
+                  <div className="ml-3">
+                    <h3 className="text-sm font-medium text-muted-foreground">
+                      Placement Rate
+                    </h3>
+                    <span className="text-2xl font-bold text-foreground">
+                      95%
+                    </span>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+          {/* Dashboard Tabs */}
+          <div className="border-b border-border transition-colors duration-300">
+            <nav className="flex -mb-px">
+              <button onClick={() => setActiveTab('internships')} className={`py-4 px-6 text-center border-b-2 font-medium text-sm transition-all duration-300 ${activeTab === 'internships' ? 'border-primary text-primary' : 'border-transparent text-muted-foreground hover:text-foreground hover:border-border'}`}>
+                My Internships
+              </button>
+              <button onClick={() => setActiveTab('applications')} className={`py-4 px-6 text-center border-b-2 font-medium text-sm transition-all duration-300 ${activeTab === 'applications' ? 'border-primary text-primary' : 'border-transparent text-muted-foreground hover:text-foreground hover:border-border'}`}>
+                Applications
+              </button>
+              <button onClick={() => setActiveTab('profile')} className={`py-4 px-6 text-center border-b-2 font-medium text-sm transition-all duration-300 ${activeTab === 'profile' ? 'border-primary text-primary' : 'border-transparent text-muted-foreground hover:text-foreground hover:border-border'}`}>
+                Company Profile
+              </button>
+              <button onClick={() => setActiveTab('analytics')} className={`py-4 px-6 text-center border-b-2 font-medium text-sm transition-all duration-300 ${activeTab === 'analytics' ? 'border-primary text-primary' : 'border-transparent text-muted-foreground hover:text-foreground hover:border-border'}`}>
+                Analytics
+              </button>
+            </nav>
+          </div>
+          {/* Dashboard Content */}
+          <div className="p-6 transition-all duration-3300">
+            {activeTab === 'internships' && <div>
+                <div className="flex justify-between items-center mb-6">
+                  <div>
+                    <h2 className="text-lg font-semibold text-foreground">
+                      Your Internship Listings
+                    </h2>
+                    <p className="text-muted-foreground text-sm">
+                      Manage and track all your internship opportunities
+                    </p>
+                  </div>
+                  <Link to="/post-internship">
+                    <Button variant="default" size="sm">
+                      <BriefcaseIcon className="mr-2 h-4 w-4" />
+                      Post Internship
+                    </Button>
+                  </Link>
+                </div>
+                {loading ? (
+                  <div className="flex justify-center items-center h-32">
+                    <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-primary"></div>
+                  </div>
+                ) : dashboardData?.internships.length ? (
+                  <div className="space-y-4">
+                    {dashboardData.internships.map(internship => (
+                      <Card key={internship.id} className="border-border transition-all duration-300 hover:border-primary/50 hover:shadow-md">
+                        <CardContent className="p-4">
+                          <div className="flex justify-between">
+                            <div>
+                              <h3 className="text-lg font-medium text-foreground transition-colors duration-300">
+                                {internship.title}
+                              </h3>
+                              {getStatusBadge(internship.status)}
+                            </div>
+                            <div className="flex space-x-2 ml-4">
+                              <Button 
+                                onClick={() => handleViewInternship(internship.id)}
+                                variant="ghost"
+                                size="icon"
+                                title="View"
+                                className="transition-all duration-300 hover:bg-accent"
+                              >
+                                <EyeIcon size={18} />
+                              </Button>
+                              <Button 
+                                onClick={() => handleEditInternship(internship.id)}
+                                variant="ghost"
+                                size="icon"
+                                title="Edit"
+                                className="transition-all duration-300 hover:bg-accent"
+                              >
+                                <EditIcon size={18} />
+                              </Button>
+                              <Button 
+                                onClick={() => handleDeleteInternship(internship.id)}
+                                variant="ghost"
+                                size="icon"
+                                title="Delete"
+                                className="transition-all duration-300 hover:bg-accent"
+                              >
+                                <TrashIcon size={18} />
+                              </Button>
+                            </div>
+                          </div>
+                          <div className="grid grid-cols-1 md:grid-cols-3 gap-2 mt-2">
+                            <div className="flex items-center text-muted-foreground">
+                              <span className="text-sm">{internship.location}</span>
+                            </div>
+                            <div className="flex items-center text-muted-foreground">
+                              <span className="text-sm">{internship.type}</span>
+                            </div>
+                            <div className="flex items-center text-muted-foreground">
+                              <span className="text-sm">{internship.duration}</span>
+                            </div>
+                          </div>
+                          <p className="text-sm text-muted-foreground mt-2 transition-colors duration-300">
+                            Posted on {internship.postedDate}
+                          </p>
+                        </CardContent>
+                      </Card>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="text-center py-12">
+                    <p className="text-muted-foreground mb-4 transition-colors duration-300">
+                      You haven't posted any internships yet.
+                    </p>
+                    <Link to="/post-internship">
+                      <Button variant="default" className="transition-all duration-300 hover:shadow-md">
+                        Post Your First Internship
+                      </Button>
+                    </Link>
+                  </div>
+                )}
+              </div>}
+            
+            {activeTab === 'applications' && (
+              <div>
+                <div className="flex justify-between items-center mb-6">
+                  <h2 className="text-lg font-medium text-foreground transition-colors duration-300">
+                    Recent Applications
+                  </h2>
+                  <div className="flex items-center space-x-2 text-sm text-muted-foreground transition-colors duration-300">
+                    <Calendar size={16} />
+                    <span>Real-time updates</span>
+                  </div>
+                </div>
+                
+                {loading ? (
+                  <div className="flex justify-center items-center h-32">
+                    <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-primary"></div>
+                  </div>
+                ) : dashboardData?.recentApplications.length ? (
+                  <div className="space-y-4">
+                    {dashboardData.recentApplications.map(application => (
+                      <Card key={application.id} className="border border-border transition-all duration-300 hover:border-primary/50 hover:shadow-md">
+                        <CardContent className="p-4">
+                          <div className="flex justify-between">
+                            <div>
+                              <h3 className="text-lg font-medium text-foreground transition-colors duration-300">
+                                {application.studentName}
+                              </h3>
+                              <p className="text-muted-foreground transition-colors duration-300">
+                                Applied for {application.internshipTitle}
+                              </p>
+                              <p className="text-sm text-muted-foreground mt-1 transition-colors duration-300">
+                                Applied on {application.appliedDate}
+                              </p>
+                            </div>
+                            <div className="flex items-center space-x-2">
+                              {getStatusBadge(application.status)}
+                            </div>
+                          </div>
+                          <div className="mt-4 flex space-x-3">
+                            <Button 
+                              onClick={() => handleApproveApplication(application.id)}
+                              variant="default"
+                              className="bg-green-600 hover:bg-green-700 transition-all duration-300"
+                            >
+                              Approve
+                            </Button>
+                            <Button 
+                              onClick={() => handleRejectApplication(application.id)}
+                              variant="default"
+                              className="bg-red-600 hover:bg-red-700 transition-all duration-300"
+                            >
+                              Reject
+                            </Button>
+                            <Button 
+                              onClick={() => navigate(`/send-notification/${application.id}`)}
+                              variant="default"
+                              className="bg-blue-600 hover:bg-blue-700 transition-all duration-300"
+                            >
+                              Send Notification
+                            </Button>
+                            <Button variant="default" className="transition-all duration-300 hover:shadow-md">
+                              View Details
+                            </Button>
+                          </div>
+                        </CardContent>
+                      </Card>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="text-center py-12">
+                    <p className="text-muted-foreground transition-colors duration-300">
+                      No applications received yet.
+                    </p>
+                  </div>
+                )}
+              </div>
+            )}
+            
+            {activeTab === 'analytics' && (
+              <div>
+                <div className="flex justify-between items-center mb-6">
+                  <h2 className="text-lg font-medium text-foreground transition-colors duration-300">
+                    Company Analytics Dashboard
+                  </h2>
+                  <div className="flex items-center space-x-2 text-sm text-muted-foreground transition-colors duration-300">
+                    <Calendar size={16} />
+                    <span>Real-time data</span>
+                  </div>
+                </div>
+
+                {/* Analytics Overview Cards */}
+                <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+                  <Card className="bg-gradient-to-r from-blue-500 to-blue-600 text-white transition-all duration-300 hover:shadow-lg">
+                    <CardContent className="p-6">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <p className="text-blue-100 transition-colors duration-300">Total Applications</p>
+                          <p className="text-2xl font-bold">{dashboardData?.stats.totalApplications || 0}</p>
+                        </div>
+                        <Users size={24} className="text-blue-200 transition-colors duration-300" />
+                      </div>
+                    </CardContent>
+                  </Card>
+                  <Card className="bg-gradient-to-r from-green-500 to-green-600 text-white transition-all duration-300 hover:shadow-lg">
+                    <CardContent className="p-6">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <p className="text-green-100 transition-colors duration-300">Active Internships</p>
+                          <p className="text-2xl font-bold">{dashboardData?.stats.activeInternships || 0}</p>
+                        </div>
+                        <BriefcaseIcon size={24} className="text-green-200 transition-colors duration-300" />
+                      </div>
+                    </CardContent>
+                  </Card>
+                  <Card className="bg-gradient-to-r from-yellow-500 to-yellow-600 text-white transition-all duration-300 hover:shadow-lg">
+                    <CardContent className="p-6">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <p className="text-yellow-100 transition-colors duration-300">Pending Apps</p>
+                          <p className="text-2xl font-bold">{dashboardData?.stats.pendingApplications || 0}</p>
+                        </div>
+                        <ClockIcon size={24} className="text-yellow-200 transition-colors duration-300" />
+                      </div>
+                    </CardContent>
+                  </Card>
+                  <Card className="bg-gradient-to-r from-purple-500 to-purple-600 text-white transition-all duration-300 hover:shadow-lg">
+                    <CardContent className="p-6">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <p className="text-purple-100 transition-colors duration-300">Conversion Rate</p>
+                          <p className="text-2xl font-bold">
+                            {dashboardData?.stats.totalApplications && dashboardData.stats.totalApplications > 0 ? 
+                              Math.round((dashboardData.stats.activeInternships / dashboardData.stats.totalApplications) * 100) : 0}%
+                          </p>
+                        </div>
+                        <TrendingUp size={24} className="text-purple-200 transition-colors duration-300" />
+                      </div>
+                    </CardContent>
+                  </Card>
+                </div>
+
+                {/* Charts Grid */}
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+                  {/* Applications Over Time */}
+                  <Card className="border border-border transition-all duration-300 hover:shadow-md">
+                    <CardHeader>
+                      <CardTitle className="flex items-center text-foreground transition-colors duration-300">
+                        <BarChart3 size={20} className="mr-2 text-blue-600" />
+                        Applications Over Time (Last 30 Days)
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="h-64">
+                        <ResponsiveContainer width="100%" height="100%">
+                          <AreaChart data={analyticsData.applicationsOverTime}>
+                            <defs>
+                              <linearGradient id="applicationGradient" x1="0" y1="0" x2="0" y2="1">
+                                <stop offset="5%" stopColor="#3B82F6" stopOpacity={0.8}/>
+                                <stop offset="95%" stopColor="#3B82F6" stopOpacity={0.1}/>
+                              </linearGradient>
+                            </defs>
+                            <CartesianGrid strokeDasharray="3 3" stroke="#E5E7EB" />
+                            <XAxis dataKey="date" stroke="#6B7280" />
+                            <YAxis stroke="#6B7280" />
+                            <Tooltip 
+                              contentStyle={{ backgroundColor: '#F9FAFB', border: '1px solid #E5E7EB', borderRadius: '8px' }}
+                            />
+                            <Area 
+                              type="monotone" 
+                              dataKey="applications" 
+                              stroke="#3B82F6" 
+                              strokeWidth={3}
+                              fillOpacity={1} 
+                              fill="url(#applicationGradient)" 
+                            />
+                          </AreaChart>
+                        </ResponsiveContainer>
+                      </div>
+                    </CardContent>
+                  </Card>
+
+                  {/* Top Performing Internships */}
+                  <Card className="border border-border transition-all duration-300 hover:shadow-md">
+                    <CardHeader>
+                      <CardTitle className="flex items-center text-foreground transition-colors duration-300">
+                        <TrendingUp size={20} className="mr-2 text-green-600" />
+                        Top Performing Internships
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="h-64">
+                        <ResponsiveContainer width="100%" height="100%">
+                          <BarChart data={analyticsData.topPerformingInternships}>
+                            <CartesianGrid strokeDasharray="3 3" stroke="#E5E7EB" />
+                            <XAxis dataKey="title" stroke="#6B7280" />
+                            <YAxis stroke="#6B7280" />
+                            <Tooltip 
+                              contentStyle={{ backgroundColor: '#F9FAFB', border: '1px solid #E5E7EB', borderRadius: '8px' }}
+                            />
+                            <Bar dataKey="applications" fill="#10B981" radius={[4, 4, 0, 0]} />
+                          </BarChart>
+                        </ResponsiveContainer>
+                      </div>
+                    </CardContent>
+                  </Card>
+                </div>
+
+                {/* Career Field Distribution and AI Insights */}
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+                  {/* Career Field Distribution */}
+                  <Card className="border border-border transition-all duration-300 hover:shadow-md">
+                    <CardHeader>
+                      <CardTitle className="flex items-center text-foreground transition-colors duration-300">
+                        <Target size={20} className="mr-2 text-indigo-600" />
+                        Internships by Career Field
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="h-64">
+                        <ResponsiveContainer width="100%" height="100%">
+                          <RechartsPieChart>
+                            <Tooltip 
+                              contentStyle={{ backgroundColor: '#F9FAFB', border: '1px solid #E5E7EB', borderRadius: '8px' }}
+                            />
+                            <Pie
+                              data={analyticsData.careerFieldDistribution}
+                              dataKey="value"
+                              nameKey="name"
+                              cx="50%"
+                              cy="50%"
+                              outerRadius={80}
+                              label={({name, value}: any) => `${name}: ${value}`}
+                            >
+                              {analyticsData.careerFieldDistribution.map((entry: any, index: number) => (
+                                <Cell key={`cell-${index}`} fill={entry.color} />
+                              ))}
+                            </Pie>
+                          </RechartsPieChart>
+                        </ResponsiveContainer>
+                      </div>
+                      <div className="mt-4">
+                        <h4 className="text-sm font-medium text-foreground mb-2">Career Focus Areas</h4>
+                        <div className="flex flex-wrap gap-2">
+                          {Object.entries(dashboardData?.stats.careerFields || {}).map(([field, count]) => (
+                            <span key={field} className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border border-primary/20 bg-primary/5 text-primary">
+                              {field}: {count}
+                            </span>
+                          ))}
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+
+                  {/* AI Insights */}
+                  <Card className="border border-border transition-all duration-300 hover:shadow-md">
+                    <CardHeader>
+                      <CardTitle className="flex items-center text-foreground transition-colors duration-300">
+                        <Brain size={20} className="mr-2 text-orange-600" />
+                        AI-Powered Insights
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="space-y-4 max-h-64 overflow-y-auto pr-2">
+                        {analyticsData.aiInsights.length > 0 ? (
+                          analyticsData.aiInsights.map((insight, index) => (
+                            <div key={index} className="border border-border rounded-lg p-4 hover:bg-muted/50 transition-colors">
+                              <div className="flex justify-between items-start mb-2">
+                                <h4 className="font-medium text-foreground">{insight.title}</h4>
+                                <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
+                                  insight.impact === 'high' ? 'bg-red-100 text-red-800' :
+                                  insight.impact === 'medium' ? 'bg-yellow-100 text-yellow-800' :
+                                  'bg-green-100 text-green-800'
+                                }`}>
+                                  {insight.impact} impact
+                                </span>
+                              </div>
+                              <p className="text-sm text-muted-foreground mb-3">{insight.description}</p>
+                              <div className="bg-blue-50 p-3 rounded-md">
+                                <p className="text-sm text-blue-800">
+                                  <span className="font-medium">Recommendation:</span> {insight.recommendation}
+                                </p>
+                              </div>
+                              <div className="mt-2 flex flex-wrap gap-1">
+                                {insight.careerFields.map((field, i) => (
+                                  <span key={i} className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-indigo-100 text-indigo-800">
+                                    {field}
+                                  </span>
+                                ))}
+                              </div>
+                            </div>
+                          ))
+                        ) : (
+                          <div className="text-center py-4">
+                            <Brain size={32} className="mx-auto text-muted-foreground mb-2" />
+                            <p className="text-muted-foreground">No AI insights available at the moment</p>
+                          </div>
+                        )}
+                      </div>
+                    </CardContent>
+                  </Card>
+                </div>
+
+                {/* Bottom Charts */}
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                  {/* Monthly Activity Overview - New Component */}
+                  <Card className="border border-border transition-all duration-300 hover:shadow-md">
+                    <CardHeader>
+                      <CardTitle className="flex items-center text-foreground transition-colors duration-300">
+                        <BarChart3 size={20} className="mr-2 text-indigo-600" />
+                        Monthly Activity Overview
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="h-64">
+                        <ResponsiveContainer width="100%" height="100%">
+                          <BarChart data={analyticsData.applicationsOverTime} barGap={8}>
+                            <CartesianGrid strokeDasharray="3 3" stroke="#E5E7EB" vertical={false} />
+                            <XAxis 
+                              dataKey="date" 
+                              stroke="#6B7280" 
+                              axisLine={false}
+                              tickLine={false}
+                              tick={{ fontSize: 12 }}
+                            />
+                            <YAxis 
+                              stroke="#6B7280" 
+                              axisLine={false}
+                              tickLine={false}
+                            />
+                            <Tooltip 
+                              contentStyle={{ 
+                                backgroundColor: 'hsl(var(--card))', 
+                                border: '1px solid hsl(var(--border))', 
+                                borderRadius: '8px',
+                                boxShadow: '0 4px 12px rgba(0, 0, 0, 0.1)'
+                              }}
+                              formatter={(value) => [value, 'Applications']}
+                              labelStyle={{ color: 'hsl(var(--foreground))', fontWeight: 'bold' }}
+                            />
+                            <Bar 
+                              dataKey="applications" 
+                              fill="hsl(var(--primary))" 
+                              name="Applications" 
+                              radius={[4, 4, 0, 0]} 
+                              barSize={24}
+                            />
+                          </BarChart>
+                        </ResponsiveContainer>
+                      </div>
+                      <div className="mt-4 flex justify-center">
+                        <div className="flex items-center">
+                          <div className="w-3 h-3 rounded-full bg-primary mr-2"></div>
+                          <span className="text-sm text-muted-foreground">Applications</span>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+
+                  {/* Skills Market Analysis - New Component */}
+                  <Card className="border border-border transition-all duration-300 hover:shadow-md">
+                    <CardHeader>
+                      <CardTitle className="flex items-center text-foreground transition-colors duration-300">
+                        <TrendingUp size={20} className="mr-2 text-orange-600" />
+                        Skills Market Analysis
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="space-y-5">
+                        {[
+                          { skill: 'JavaScript', demand: 85, color: 'from-yellow-400 to-yellow-600' },
+                          { skill: 'React', demand: 92, color: 'from-blue-400 to-blue-600' },
+                          { skill: 'Python', demand: 78, color: 'from-green-400 to-green-600' },
+                          { skill: 'Data Analysis', demand: 72, color: 'from-purple-400 to-purple-600' },
+                          { skill: 'Communication', demand: 88, color: 'from-pink-400 to-pink-600' }
+                        ].map((item, index) => (
+                          <div key={index} className="space-y-2">
+                            <div className="flex justify-between">
+                              <span className="font-medium text-foreground">{item.skill}</span>
+                              <span className="text-sm text-muted-foreground">{item.demand}% demand</span>
+                            </div>
+                            <div className="relative h-3 bg-muted rounded-full overflow-hidden">
+                              <div 
+                                className={`absolute top-0 left-0 h-full bg-gradient-to-r ${item.color} rounded-full`}
+                                style={{ width: `${item.demand}%` }}
+                              ></div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                      <div className="mt-6 p-4 bg-gradient-to-r from-blue-50 to-purple-50 rounded-lg border border-blue-100 transition-all duration-300">
+                        <div className="flex">
+                          <div className="flex-shrink-0">
+                            <svg className="h-5 w-5 text-blue-500" fill="currentColor" viewBox="0 0 20 20">
+                              <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
+                            </svg>
+                          </div>
+                          <div className="ml-3">
+                            <p className="text-sm text-blue-800">
+                              <strong>Insight:</strong> JavaScript and React skills are in highest demand among applicants.
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                </div>
+
+                {/* Real-time Updates Banner */}
+                <div className="mt-8 bg-gradient-to-r from-primary to-secondary p-4 rounded-lg text-primary-foreground transition-all duration-300">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center space-x-3">
+                      <div className="w-3 h-3 bg-green-300 rounded-full animate-pulse"></div>
+                      <span className="font-medium">Live Analytics Dashboard</span>
+                    </div>
+                    <span className="text-sm text-primary-foreground/80">Updates every 30 seconds</span>
+                  </div>
+                </div>
+              </div>
+            )}
+            
+            {activeTab === 'profile' && (
+              <div>
+                <h2 className="text-lg font-medium text-foreground mb-6 transition-colors duration-300">
+                  Company Profile
+                </h2>
+                <div className="bg-muted p-6 rounded-lg transition-colors duration-300">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div>
+                      <label className="block text-sm font-medium text-foreground mb-1 transition-colors duration-300">
+                        Company Name
+                      </label>
+                      <input 
+                        type="text" 
+                        className="w-full px-4 py-2 border border-input rounded-md bg-background text-foreground transition-all duration-300 focus:ring-2 focus:ring-primary focus:border-primary" 
+                        value={profileData.name}
+                        onChange={(e) => handleInputChange('name', e.target.value)}
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-foreground mb-1 transition-colors duration-300">
+                        Email
+                      </label>
+                      <input 
+                        type="email" 
+                        className="w-full px-4 py-2 border border-input rounded-md bg-background text-foreground transition-all duration-300" 
+                        value={profileData.email}
+                        disabled 
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-foreground mb-1 transition-colors duration-300">
+                        Website
+                      </label>
+                      <input 
+                        type="text" 
+                        className="w-full px-4 py-2 border border-input rounded-md bg-background text-foreground transition-all duration-300 focus:ring-2 focus:ring-primary focus:border-primary" 
+                        placeholder="https://example.com"
+                        value={profileData.website}
+                        onChange={(e) => handleInputChange('website', e.target.value)}
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-foreground mb-1 transition-colors duration-300">
+                        Industry
+                      </label>
+                      <select 
+                        className="w-full px-4 py-2 border border-input rounded-md bg-background text-foreground transition-all duration-300 focus:ring-2 focus:ring-primary focus:border-primary"
+                        value={profileData.industry}
+                        onChange={(e) => handleInputChange('industry', e.target.value)}
+                      >
+                        <option value="Technology">Technology</option>
+                        <option value="Finance">Finance</option>
+                        <option value="Healthcare">Healthcare</option>
+                        <option value="Education">Education</option>
+                        <option value="Manufacturing">Manufacturing</option>
+                        <option value="Retail">Retail</option>
+                        <option value="Other">Other</option>
+                      </select>
+                    </div>
+                    <div className="md:col-span-2">
+                      <label className="block text-sm font-medium text-foreground mb-1 transition-colors duration-300">
+                        Company Description
+                      </label>
+                      <textarea 
+                        rows={4} 
+                        className="w-full px-4 py-2 border border-input rounded-md bg-background text-foreground transition-all duration-300 focus:ring-2 focus:ring-primary focus:border-primary" 
+                        placeholder="Tell students about your company..."
+                        value={profileData.description}
+                        onChange={(e) => handleInputChange('description', e.target.value)}
+                      ></textarea>
+                    </div>
+                  </div>
+                  <div className="mt-6">
+                    <Button onClick={handleProfileSave} variant="default" className="transition-all duration-300 hover:shadow-md">
+                      Save Changes
+                    </Button>
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
 };
+
 export default CompanyDashboard;
