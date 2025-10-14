@@ -1,23 +1,61 @@
 import React, { useState } from 'react';
 import { Mail, MessageCircle, ThumbsUp, ThumbsDown, Send } from 'lucide-react';
+import { feedbackAPI } from '../lib/new-api-client';
+import { toast } from '@/hooks/use-toast';
 
 const FeedbackPage = () => {
   const [feedbackType, setFeedbackType] = useState<'positive' | 'negative' | null>(null);
   const [message, setMessage] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSubmitted, setIsSubmitted] = useState(false);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    // In a real application, you would send this data to your backend
-    console.log('Feedback submitted:', { feedbackType, message });
-    setIsSubmitted(true);
     
-    // Reset form after submission
-    setTimeout(() => {
-      setFeedbackType(null);
-      setMessage('');
-      setIsSubmitted(false);
-    }, 3000);
+    if (!feedbackType) {
+      toast({
+        title: "Error",
+        description: "Please select a feedback type",
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    if (!message.trim()) {
+      toast({
+        title: "Error",
+        description: "Please enter your feedback message",
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    setIsSubmitting(true);
+    
+    try {
+      await feedbackAPI.submit({ type: feedbackType, message });
+      setIsSubmitted(true);
+      
+      toast({
+        title: "Success",
+        description: "Thank you for your feedback!",
+      });
+      
+      // Reset form after submission
+      setTimeout(() => {
+        setFeedbackType(null);
+        setMessage('');
+        setIsSubmitted(false);
+      }, 3000);
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.response?.data?.error?.message || 'Failed to submit feedback',
+        variant: "destructive",
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   if (isSubmitted) {
@@ -102,9 +140,14 @@ const FeedbackPage = () => {
           <div className="pt-4">
             <button
               type="submit"
-              className="w-full px-6 py-3 bg-primary text-primary-foreground font-medium rounded-md hover:bg-primary/90 transition-colors"
+              disabled={isSubmitting}
+              className={`w-full px-6 py-3 font-medium rounded-md transition-colors ${
+                isSubmitting 
+                  ? 'bg-muted text-muted-foreground cursor-not-allowed' 
+                  : 'bg-primary text-primary-foreground hover:bg-primary/90'
+              }}`}
             >
-              Submit Feedback
+              {isSubmitting ? 'Submitting...' : 'Submit Feedback'}
             </button>
           </div>
         </form>

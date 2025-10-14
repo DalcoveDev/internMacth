@@ -1,147 +1,142 @@
 import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { ArrowLeftIcon, MapPinIcon, CalendarIcon, ClockIcon, CheckIcon, XIcon } from 'lucide-react';
-import { useToast } from '../components/ToastProvider';
+import { useToast } from '@/hooks/use-toast';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+// Import the real API client
+import { internshipsAPI } from '@/lib/new-api-client';
 
 const InternshipApproval = () => {
-  const { showWarning, showSuccess } = useToast();
+  const { toast } = useToast();
   const {
     id
-  } = useParams();
+  } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const [internship, setInternship] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [rejectionReason, setRejectionReason] = useState('');
   const [showRejectionForm, setShowRejectionForm] = useState(false);
 
-  // Generate mock internship data
-  const generateMockInternship = (id: string) => {
-    const mockInternships: Record<string, any> = {
-      '1': {
-        id: 1,
-        title: 'Software Development Intern',
-        company: 'Tech Innovations Inc.',
-        location: 'San Francisco, CA',
-        type: 'Full-time',
-        duration: '3 months',
-        deadline: '2023-06-30',
-        salary: '$25/hr',
-        description: "Join our engineering team to develop cutting-edge web applications using React and Node.js. You'll work directly with senior developers on real projects.",
-        responsibilities: [
-          'Develop and maintain web applications using React and Node.js',
-          'Collaborate with design and product teams to implement new features',
-          'Write clean, maintainable, and well-documented code',
-          'Participate in code reviews and team meetings'
-        ],
-        requirements: [
-          'Currently pursuing a degree in Computer Science or related field',
-          'Experience with JavaScript, HTML, and CSS',
-          'Familiarity with React and Node.js',
-          'Strong problem-solving skills'
-        ],
-        benefits: [
-          'Flexible working hours',
-          'Mentorship from senior developers',
-          'Opportunity to work on real projects',
-          'Potential for full-time employment'
-        ],
-        companyEmail: 'careers@techinnovations.com',
-        status: 'pending'
-      },
-      '2': {
-        id: 2,
-        title: 'Marketing Intern',
-        company: 'Global Media Group',
-        location: 'New York, NY',
-        type: 'Part-time',
-        duration: '6 months',
-        deadline: '2023-07-15',
-        salary: '$20/hr',
-        description: 'Assist our marketing team in developing and implementing digital marketing campaigns. Learn about SEO, content marketing, and social media strategy.',
-        responsibilities: [
-          'Create and schedule social media content',
-          'Analyze marketing campaign performance',
-          'Assist with email marketing campaigns',
-          'Support content creation for blog posts and newsletters'
-        ],
-        requirements: [
-          'Currently pursuing a degree in Marketing or Communications',
-          'Experience with social media platforms',
-          'Strong written and verbal communication skills',
-          'Familiarity with Google Analytics'
-        ],
-        benefits: [
-          'Exposure to various marketing channels',
-          'Professional development opportunities',
-          'Networking events',
-          'Flexible schedule'
-        ],
-        companyEmail: 'hr@globalmediagroup.com',
-        status: 'pending'
-      }
-    };
-    
-    return mockInternships[id] || {
-      id: Number(id),
-      title: 'Sample Internship Position',
-      company: 'Sample Company',
-      location: 'Remote',
-      type: 'Full-time',
-      duration: '3 months',
-      deadline: '2023-12-31',
-      salary: 'Competitive',
-      description: 'This is a sample internship position for demonstration purposes.',
-      responsibilities: [
-        'Assist with daily tasks',
-        'Participate in team meetings',
-        'Learn industry best practices'
-      ],
-      requirements: [
-        'Strong work ethic',
-        'Willingness to learn',
-        'Good communication skills'
-      ],
-      benefits: [
-        'Learning opportunities',
-        'Mentorship',
-        'Flexible schedule'
-      ],
-      companyEmail: 'sample@company.com',
-      status: 'pending'
-    };
+  // Helper functions for showing toast notifications
+  const showError = (message: string, title: string = "Error") => {
+    toast({
+      title,
+      description: message,
+      variant: "destructive",
+    });
+  };
+
+  const showSuccess = (message: string, title: string = "Success") => {
+    toast({
+      title,
+      description: message,
+    });
   };
 
   useEffect(() => {
-    // Load mock data
-    try {
-      const mockInternship = generateMockInternship(id || '');
-      setInternship(mockInternship);
-      setLoading(false);
-    } catch (error) {
-      console.error('Error generating mock internship:', error);
-      setInternship(null);
-      setLoading(false);
-    }
+    // Load real internship data
+    const loadInternshipData = async () => {
+      if (!id) return;
+      
+      try {
+        setLoading(true);
+        const response = await internshipsAPI.getById(Number(id));
+        const internshipData = response.data.data?.internship;
+        
+        if (!internshipData) {
+          showError('Internship not found');
+          return;
+        }
+        
+        setInternship({
+          id: internshipData.id,
+          title: internshipData.title,
+          company: internshipData.company_name || 'Unknown Company',
+          location: internshipData.location,
+          type: internshipData.type,
+          duration: internshipData.duration,
+          deadline: internshipData.deadline,
+          salary: internshipData.salary_min ? `$${internshipData.salary_min}/hr` : 'Unpaid',
+          description: internshipData.description,
+          responsibilities: internshipData.responsibilities ? internshipData.responsibilities.split(',') : [],
+          requirements: internshipData.requirements ? internshipData.requirements.split(',') : [],
+          benefits: internshipData.benefits ? internshipData.benefits.split(',') : [],
+          companyEmail: internshipData.posted_by_email || 'contact@company.com',
+          postedDate: internshipData.created_at,
+          status: internshipData.is_approved ? 'approved' : (internshipData.is_active ? 'pending' : 'rejected')
+        });
+      } catch (error: any) {
+        console.error('Error loading internship:', error);
+        let errorMessage = 'Failed to load internship details.';
+        
+        if (error.response?.status === 404) {
+          errorMessage = 'Internship not found.';
+        } else if (error.response?.status === 500) {
+          errorMessage = 'Server error. Please try again later.';
+        } else if (error.message) {
+          errorMessage = error.message;
+        }
+        
+        showError(errorMessage);
+        setInternship(null);
+      } finally {
+        setLoading(false);
+      }
+    };
+    
+    loadInternshipData();
   }, [id]);
 
-  const handleApprove = () => {
-    // Simulate approval
-    setInternship((prev: any) => ({ ...(prev || {}), status: 'approved' }));
-    showSuccess('Internship Approved', 'The internship has been approved successfully!');
-    setTimeout(() => navigate('/admin-dashboard'), 1500);
+  const handleApprove = async () => {
+    if (!internship) return;
+    
+    try {
+      await internshipsAPI.approve(internship.id);
+      setInternship((prev: any) => ({ ...prev, status: 'approved' }));
+      showSuccess('Internship Approved', 'The internship has been approved successfully!');
+      setTimeout(() => navigate('/admin-dashboard'), 1500);
+    } catch (error: any) {
+      console.error('Error approving internship:', error);
+      let errorMessage = 'Failed to approve the internship. Please try again.';
+      
+      if (error.response?.status === 404) {
+        errorMessage = 'Internship not found.';
+      } else if (error.response?.status === 500) {
+        errorMessage = 'Server error. Please try again later.';
+      } else if (error.message) {
+        errorMessage = error.message;
+      }
+      
+      showError(errorMessage);
+    }
   };
 
-  const handleReject = () => {
-    if (!rejectionReason) {
-      showWarning('Reason Required', 'Please provide a reason for rejection');
+  const handleReject = async () => {
+    if (!internship) {
+      showError('Internship Required', 'No internship selected');
       return;
     }
-    // Simulate rejection
-    setInternship((prev: any) => ({ ...(prev || {}), status: 'rejected', rejectionReason }));
-    showSuccess('Internship Rejected', 'The internship has been rejected.');
-    setTimeout(() => navigate('/admin-dashboard'), 1500);
+    
+    try {
+      await internshipsAPI.reject(internship.id);
+      setInternship((prev: any) => ({ ...prev, status: 'rejected' }));
+      showSuccess('Internship Rejected', 'The internship has been rejected.');
+      setTimeout(() => navigate('/admin-dashboard'), 1500);
+    } catch (error: any) {
+      console.error('Error rejecting internship:', error);
+      let errorMessage = 'Failed to reject the internship. Please try again.';
+      
+      if (error.response?.status === 404) {
+        errorMessage = 'Internship not found.';
+      } else if (error.response?.status === 500) {
+        errorMessage = 'Server error. Please try again later.';
+      } else if (error.message) {
+        errorMessage = error.message;
+      }
+      
+      showError(errorMessage);
+    }
   };
 
   if (loading) {

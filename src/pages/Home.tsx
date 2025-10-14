@@ -1,55 +1,43 @@
-import { useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { SearchIcon, UserIcon, BuildingIcon, TrendingUpIcon } from 'lucide-react';
 import Hero from '../components/Hero';
 import InternshipCard from '../components/InternshipCard';
 import { Internship } from '../components/InternshipCard';
-
-// Mock data for featured internships
-const featuredInternships: Internship[] = [
-  {
-    id: 1,
-    title: 'Software Engineering Intern',
-    company: 'TechCorp',
-    location: 'San Francisco, CA',
-    type: 'Full-time',
-    duration: '3 months',
-    description: 'Join our engineering team to work on cutting-edge web applications using React, Node.js, and cloud technologies.',
-    requirements: ['JavaScript', 'React', 'Node.js'],
-    postedDate: '2023-05-15',
-    deadline: '2023-06-15',
-    logoUrl: 'https://images.unsplash.com/photo-1549921296-3b0f9a35af35?ixlib=rb-1.2.1&auto=format&fit=crop&w=1000&q=80'
-  },
-  {
-    id: 2,
-    title: 'Marketing Intern',
-    company: 'BrandVision',
-    location: 'New York, NY',
-    type: 'Part-time',
-    duration: '6 months',
-    description: 'Work with our marketing team to develop campaigns, analyze market trends, and engage with customers across digital platforms.',
-    requirements: ['Marketing', 'Social Media', 'Analytics'],
-    postedDate: '2023-05-10',
-    deadline: '2023-06-10',
-    logoUrl: 'https://images.unsplash.com/photo-1563986768494-4dee2763ff3f?ixlib=rb-1.2.1&auto=format&fit=crop&w=1000&q=80'
-  },
-  {
-    id: 3,
-    title: 'Data Science Intern',
-    company: 'DataInsights',
-    location: 'Remote',
-    type: 'Full-time',
-    duration: '4 months',
-    description: 'Apply your data science skills to real-world problems, build predictive models, and derive insights from large datasets.',
-    requirements: ['Python', 'SQL', 'Machine Learning'],
-    postedDate: '2023-05-05',
-    deadline: '2023-06-05',
-    logoUrl: 'https://images.unsplash.com/photo-1542744173-8e7e53415bb0?ixlib=rb-1.2.1&auto=format&fit=crop&w=1000&q=80'
-  }
-];
+import { homeAPI } from '../lib/new-api-client';
+import { toast } from '@/hooks/use-toast';
 
 const Home = () => {
+  const [content, setContent] = useState({
+    featuredInternships: [] as Internship[],
+    stats: {
+      companies: 0,
+      jobs: 0,
+      placements: 0
+    }
+  });
+  
+  const [loading, setLoading] = useState(true);
+
   useEffect(() => {
+    const fetchContent = async () => {
+      try {
+        const response = await homeAPI.getContent();
+        setContent(response.data.data);
+      } catch (error: any) {
+        console.error('Failed to fetch home content:', error);
+        toast({
+          title: "Error",
+          description: "Failed to load home content. Using default content.",
+          variant: "destructive",
+        });
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchContent();
+    
     // Preload background images
     const images = [
       '/images/Download Abstract green papercut style layers background for free.jpeg',
@@ -74,6 +62,17 @@ const Home = () => {
       img.onerror = updateLoadedState;
     });
   }, []);
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-background text-foreground flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto"></div>
+          <p className="mt-4 text-lg">Loading...</p>
+        </div>
+      </div>
+    );
+  }
 
   return <div className="min-h-screen bg-background text-foreground">
       <Hero />
@@ -198,7 +197,7 @@ const Home = () => {
             </p>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {featuredInternships.map(internship => <InternshipCard key={internship.id} internship={internship} />)}
+            {content.featuredInternships.map(internship => <InternshipCard key={internship.id} internship={internship} />)}
           </div>
           
           {/* View All Button */}

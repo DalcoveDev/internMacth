@@ -1,441 +1,255 @@
-// Mock API implementation that returns mock data instead of making actual API calls
+// API implementation that makes actual API calls to the backend
+import { toast } from '@/hooks/use-toast';
+import { 
+  authAPI, 
+  usersAPI, 
+  internshipsAPI, 
+  applicationsAPI
+} from '@/lib/new-api-client';
 
-// Mock data generators
-const generateMockInternships = () => {
-  return [
-    {
-      id: 1,
-      title: 'Software Development Intern',
-      company: 'Tech Innovations Inc.',
-      location: 'San Francisco, CA',
-      type: 'Full-time',
-      duration: '3 months',
-      deadline: '2023-06-30',
-      salary: '$25/hr',
-      description: "Join our engineering team to develop cutting-edge web applications using React and Node.js. You'll work directly with senior developers on real projects.",
-      skills: 'React, JavaScript, Node.js',
-      postedById: 1,
-      createdAt: '2023-05-15',
-      updatedAt: '2023-05-15',
-      isApproved: true,
-      postedBy: {
-        email: 'careers@techinnovations.com'
-      }
-    },
-    {
-      id: 2,
-      title: 'Marketing Intern',
-      company: 'Global Media Group',
-      location: 'New York, NY',
-      type: 'Part-time',
-      duration: '6 months',
-      deadline: '2023-07-15',
-      salary: '$20/hr',
-      description: 'Assist our marketing team in developing and implementing digital marketing campaigns. Learn about SEO, content marketing, and social media strategy.',
-      skills: 'Marketing, Social Media, Content Creation',
-      postedById: 2,
-      createdAt: '2023-05-10',
-      updatedAt: '2023-05-10',
-      isApproved: true,
-      postedBy: {
-        email: 'hr@globalmediagroup.com'
-      }
-    },
-    {
-      id: 3,
-      title: 'Data Science Intern',
-      company: 'Analytics Pro',
-      location: 'Remote',
-      type: 'Full-time',
-      duration: '4 months',
-      deadline: '2023-06-25',
-      salary: '$30/hr',
-      description: 'Work with our data science team to analyze large datasets and build predictive models. Great opportunity to apply machine learning skills in a real-world setting.',
-      skills: 'Python, Machine Learning, Data Analysis',
-      postedById: 3,
-      createdAt: '2023-05-05',
-      updatedAt: '2023-05-05',
-      isApproved: false,
-      postedBy: {
-        email: 'jobs@analyticspro.com'
-      }
-    }
-  ];
-};
-
-const generateMockUsers = () => {
-  return [
-    {
-      id: 1,
-      name: 'John Doe',
-      email: 'john.doe@student.com',
-      role: 'student',
-      createdAt: '2023-01-15'
-    },
-    {
-      id: 2,
-      name: 'Jane Smith',
-      email: 'jane.smith@company.com',
-      role: 'company',
-      createdAt: '2023-02-20'
-    },
-    {
-      id: 3,
-      name: 'Admin User',
-      email: 'admin@internmatch.com',
-      role: 'admin',
-      createdAt: '2023-01-01'
-    }
-  ];
-};
-
-const generateMockApplications = () => {
-  return [
-    {
-      id: 1,
-      internshipId: 1,
-      studentName: 'John Doe',
-      studentEmail: 'john.doe@student.com',
-      coverLetter: 'I am very interested in this position...',
-      skills: 'React, JavaScript, Node.js',
-      studentPhone: '+1234567890',
-      education: 'Computer Science, Stanford University',
-      experience: '2 years of web development experience',
-      portfolio: 'https://github.com/johndoe',
-      availability: 'Available immediately',
-      status: 'pending',
-      createdAt: '2023-05-16'
-    },
-    {
-      id: 2,
-      internshipId: 1,
-      studentName: 'Alice Johnson',
-      studentEmail: 'alice.johnson@student.com',
-      coverLetter: 'This position aligns perfectly with my career goals...',
-      skills: 'Python, Data Analysis',
-      studentPhone: '+1987654321',
-      education: 'Data Science, MIT',
-      experience: 'Interned at DataCorp last summer',
-      portfolio: 'https://linkedin.com/in/alicejohnson',
-      availability: 'Starting June 2023',
-      status: 'approved',
-      createdAt: '2023-05-17'
-    }
-  ];
-};
-
-// Mock dashboard data generators
-export async function getAdminDashboardData() {
-  // Simulate network delay
-  await new Promise(resolve => setTimeout(resolve, 500));
+// Enhanced error handling wrapper
+const handleApiError = (error: any, operation: string) => {
+  console.error(`${operation} error:`, error);
   
-  return {
-    stats: {
-      totalUsers: 42,
-      totalInternships: 28,
-      pendingApprovals: 5,
-      totalApplications: 156,
-      userStats: {
-        student: 28,
-        company: 12,
-        admin: 2
-      }
-    },
-    recentActivity: [
-      {
-        type: 'user',
-        action: 'registered',
-        name: 'John Doe',
-        date: new Date().toISOString()
-      },
-      {
-        type: 'internship',
-        action: 'posted',
-        name: 'Software Engineering Intern',
-        company: 'Tech Corp',
-        date: new Date(Date.now() - 86400000).toISOString()
-      }
-    ],
-    users: generateMockUsers().slice(0, 10),
-    pendingInternships: generateMockInternships().filter(i => !i.isApproved),
-    recentApplications: generateMockApplications()
-  };
+  const errorMessage = error.message || `Failed to ${operation.toLowerCase()}`;
+  
+  toast({
+    title: `${operation} Failed`,
+    description: errorMessage,
+    variant: "destructive",
+  });
+  
+  throw error;
+};
+
+// Success notification wrapper
+const showSuccess = (message: string, title: string = "Success") => {
+  toast({
+    title,
+    description: message,
+  });
+};
+
+// Dashboard data functions
+export async function getAdminDashboardData() {
+  try {
+    // Fetch real dashboard data from backend
+    const response = await usersAPI.getAdminStats();
+    return response.data.data;
+  } catch (error) {
+    handleApiError(error, 'Fetch Admin Dashboard Data');
+  }
 }
 
 export async function getStudentDashboardData() {
-  // Simulate network delay
-  await new Promise(resolve => setTimeout(resolve, 500));
-  
-  return {
-    stats: {
-      totalApplications: 12,
-      pendingApplications: 5,
-      approvedApplications: 3
-    },
-    applications: generateMockApplications()
-  };
+  try {
+    // Fetch real student dashboard data from backend
+    const response = await applicationsAPI.getStudentApplications();
+    return response.data.data;
+  } catch (error) {
+    handleApiError(error, 'Fetch Student Dashboard Data');
+  }
 }
 
 export async function getCompanyDashboardData() {
-  // Simulate network delay
-  await new Promise(resolve => setTimeout(resolve, 500));
-  
-  return {
-    stats: {
-      activeInternships: 2,
-      pendingInternships: 1,
-      totalApplications: 15,
-      pendingApplications: 8
-    },
-    internships: generateMockInternships(),
-    recentApplications: generateMockApplications()
-  };
+  try {
+    // Fetch real company dashboard data from backend
+    const [internshipsResponse, applicationsResponse] = await Promise.all([
+      internshipsAPI.getAll(),
+      applicationsAPI.getCompanyApplications()
+    ]);
+    
+    return {
+      stats: {
+        activeInternships: internshipsResponse.data.data?.internships?.filter((i: any) => i.is_approved).length || 0,
+        pendingInternships: internshipsResponse.data.data?.internships?.filter((i: any) => !i.is_approved).length || 0,
+        totalApplications: applicationsResponse.data.data?.applications?.length || 0,
+        pendingApplications: applicationsResponse.data.data?.applications?.filter((a: any) => a.status === 'pending').length || 0
+      },
+      internships: internshipsResponse.data.data?.internships || [],
+      recentApplications: applicationsResponse.data.data?.applications?.slice(0, 5) || []
+    };
+  } catch (error) {
+    handleApiError(error, 'Fetch Company Dashboard Data');
+  }
 }
 
 // Paginated endpoints
 export async function listInternships(page = 1, limit = 10) {
-  // Simulate network delay
-  await new Promise(resolve => setTimeout(resolve, 300));
-  
-  const allInternships = generateMockInternships();
-  const start = (page - 1) * limit;
-  const end = start + limit;
-  const data = allInternships.slice(start, end);
-  
-  return {
-    data,
-    pagination: {
-      page,
-      limit,
-      total: allInternships.length,
-      totalPages: Math.ceil(allInternships.length / limit)
-    }
-  };
+  try {
+    const response = await internshipsAPI.getAll({ page, limit });
+    return response.data.data;
+  } catch (error) {
+    handleApiError(error, 'List Internships');
+  }
 }
 
 export async function listUsers(page = 1, limit = 10) {
-  // Simulate network delay
-  await new Promise(resolve => setTimeout(resolve, 300));
-  
-  const allUsers = generateMockUsers();
-  const start = (page - 1) * limit;
-  const end = start + limit;
-  const data = allUsers.slice(start, end);
-  
-  return {
-    data,
-    pagination: {
-      page,
-      limit,
-      total: allUsers.length,
-      totalPages: Math.ceil(allUsers.length / limit)
-    }
-  };
+  try {
+    const response = await usersAPI.getAll({ page, limit });
+    return response.data.data;
+  } catch (error) {
+    handleApiError(error, 'List Users');
+  }
 }
 
 export async function listApplications(page = 1, limit = 10) {
-  // Simulate network delay
-  await new Promise(resolve => setTimeout(resolve, 300));
-  
-  const allApplications = generateMockApplications();
-  const start = (page - 1) * limit;
-  const end = start + limit;
-  const data = allApplications.slice(start, end);
-  
-  return {
-    data,
-    pagination: {
-      page,
-      limit,
-      total: allApplications.length,
-      totalPages: Math.ceil(allApplications.length / limit)
-    }
-  };
+  try {
+    const response = await applicationsAPI.getStudentApplications({ page, limit });
+    return response.data.data;
+  } catch (error) {
+    handleApiError(error, 'List Applications');
+  }
 }
 
 export async function getInternship(id: number) {
-  // Simulate network delay
-  await new Promise(resolve => setTimeout(resolve, 200));
-  
-  const internships = generateMockInternships();
-  const internship = internships.find(i => i.id === id);
-  
-  if (!internship) {
-    throw new Error('Internship not found');
+  try {
+    const response = await internshipsAPI.getById(id);
+    return response.data.data.internship;
+  } catch (error) {
+    handleApiError(error, 'Get Internship');
   }
-  
-  return {
-    ...internship,
-    responsibilities: [
-      'Develop and maintain web applications',
-      'Collaborate with design and product teams',
-      'Write clean, maintainable code',
-      'Participate in code reviews'
-    ],
-    requirements: [
-      'Currently pursuing a degree in Computer Science',
-      'Experience with JavaScript, HTML, and CSS',
-      'Familiarity with React and Node.js',
-      'Strong problem-solving skills'
-    ],
-    benefits: [
-      'Flexible working hours',
-      'Mentorship from senior developers',
-      'Opportunity to work on real projects'
-    ]
-  };
 }
 
 export async function postInternship(data: any) {
-  // Simulate network delay
-  await new Promise(resolve => setTimeout(resolve, 500));
-  
-  // Return a mock response
-  return {
-    id: Date.now(),
-    ...data,
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString(),
-    isApproved: false
-  };
+  try {
+    const response = await internshipsAPI.create(data);
+    showSuccess('Internship posted successfully! It will be reviewed by admin.');
+    return response.data.data;
+  } catch (error) {
+    handleApiError(error, 'Post Internship');
+  }
 }
 
-export async function approveInternship(_id: number) {
-  // Simulate network delay
-  await new Promise(resolve => setTimeout(resolve, 300));
-  
-  // Return a mock response
-  return { success: true, message: 'Internship approved successfully' };
+export async function approveInternship(id: number) {
+  try {
+    const response = await internshipsAPI.approve(id);
+    showSuccess('Internship approved successfully!');
+    return response.data;
+  } catch (error) {
+    handleApiError(error, 'Approve Internship');
+  }
 }
 
-export async function rejectInternship(_id: number, _reason = '') {
-  // Simulate network delay
-  await new Promise(resolve => setTimeout(resolve, 300));
-  
-  // Return a mock response
-  return { success: true, message: 'Internship rejected successfully' };
+export async function rejectInternship(id: number) {
+  try {
+    const response = await internshipsAPI.reject(id);
+    showSuccess('Internship rejected successfully!');
+    return response.data;
+  } catch (error) {
+    handleApiError(error, 'Reject Internship');
+  }
 }
 
-export async function deleteInternship(_id: number) {
-  // Simulate network delay
-  await new Promise(resolve => setTimeout(resolve, 300));
-  
-  // Return a mock response
-  return { success: true, message: 'Internship deleted successfully' };
+export async function deleteInternship(id: number) {
+  try {
+    const response = await internshipsAPI.delete(id);
+    showSuccess('Internship deleted successfully!');
+    return response.data;
+  } catch (error) {
+    handleApiError(error, 'Delete Internship');
+  }
 }
 
 export async function createUser(data: any) {
-  // Simulate network delay
-  await new Promise(resolve => setTimeout(resolve, 500));
-  
-  // Return a mock response
-  return {
-    id: Date.now(),
-    ...data,
-    createdAt: new Date().toISOString()
-  };
+  try {
+    const response = await authAPI.register(data);
+    return response.data.data.user;
+  } catch (error) {
+    handleApiError(error, 'Create User');
+  }
 }
 
 export async function updateUser(id: number, data: any) {
-  // Simulate network delay
-  await new Promise(resolve => setTimeout(resolve, 300));
-  
-  // Return a mock response
-  return {
-    id,
-    ...data,
-    updatedAt: new Date().toISOString()
-  };
+  try {
+    const response = await usersAPI.update(id, data);
+    return response.data.data;
+  } catch (error) {
+    handleApiError(error, 'Update User');
+  }
 }
 
-export async function toggleUserStatus(_id: number, _status: 'active' | 'inactive') {
-  // Simulate network delay
-  await new Promise(resolve => setTimeout(resolve, 300));
-  
-  // Return a mock response
-  return { success: true, message: `User status updated to ${status}` };
+export async function toggleUserStatus(id: number, status: 'active' | 'inactive') {
+  try {
+    // This would require a specific API endpoint for toggling user status
+    // For now, we'll use the update user endpoint
+    const response = await usersAPI.update(id, { status });
+    return response.data;
+  } catch (error) {
+    handleApiError(error, 'Toggle User Status');
+  }
 }
 
 export async function getApplication(id: number) {
-  // Simulate network delay
-  await new Promise(resolve => setTimeout(resolve, 200));
-  
-  const applications = generateMockApplications();
-  const application = applications.find(a => a.id === id);
-  
-  if (!application) {
-    throw new Error('Application not found');
+  try {
+    // This would require a specific API endpoint for getting a single application
+    // For now, we'll fetch all applications and filter
+    const response = await applicationsAPI.getStudentApplications();
+    const applications = response.data.data.applications || [];
+    const application = applications.find((a: any) => a.id === id);
+    
+    if (!application) {
+      throw new Error('Application not found');
+    }
+    
+    return application;
+  } catch (error) {
+    handleApiError(error, 'Get Application');
   }
-  
-  return application;
 }
 
-export async function updateApplicationStatus(_id: number, _status: 'pending'|'approved'|'rejected') {
-  // Simulate network delay
-  await new Promise(resolve => setTimeout(resolve, 300));
-  
-  // Return a mock response
-  return { success: true, message: `Application status updated to ${status}` };
+export async function updateApplicationStatus(id: number, status: 'pending'|'approved'|'rejected') {
+  try {
+    const response = await applicationsAPI.updateStatus(id, status);
+    return response.data;
+  } catch (error) {
+    handleApiError(error, 'Update Application Status');
+  }
 }
 
 export async function signup(data: any) {
-  // Simulate network delay
-  await new Promise(resolve => setTimeout(resolve, 1000));
-  
-  // Return a mock response
-  return {
-    user: {
-      id: Date.now(),
-      ...data,
-      createdAt: new Date().toISOString()
-    },
-    token: 'mock_jwt_token_' + Date.now()
-  };
+  try {
+    const response = await authAPI.register(data);
+    return response.data;
+  } catch (error) {
+    handleApiError(error, 'Signup');
+  }
 }
 
 export async function login(data: any) {
-  // Simulate network delay
-  await new Promise(resolve => setTimeout(resolve, 800));
-  
-  // Return a mock response
-  const users = generateMockUsers();
-  const user = users.find(u => u.email === data.email && u.role === data.role);
-  
-  if (!user) {
-    throw new Error('Invalid credentials');
+  try {
+    const response = await authAPI.login(data);
+    return response.data;
+  } catch (error) {
+    handleApiError(error, 'Login');
   }
-  
-  return {
-    user: {
-      ...user,
-      token: 'mock_jwt_token_' + Date.now()
-    },
-    token: 'mock_jwt_token_' + Date.now()
-  };
 }
 
 export async function createApplication(data: any) {
-  // Simulate network delay
-  await new Promise(resolve => setTimeout(resolve, 500));
-  
-  // Return a mock response
-  return {
-    id: Date.now(),
-    ...data,
-    status: 'pending',
-    createdAt: new Date().toISOString()
-  };
+  try {
+    const response = await applicationsAPI.create(data);
+    showSuccess('Application submitted successfully! You will be notified of updates.');
+    return response.data.data;
+  } catch (error) {
+    handleApiError(error, 'Create Application');
+  }
 }
 
-// Performance monitoring functions (mock implementations)
+// Performance monitoring functions
 export function getAPIMetrics() {
+  // This would require a specific API endpoint for metrics
+  // For now, return empty array
   return [];
 }
 
 export function getAverageResponseTime() {
+  // This would require a specific API endpoint for metrics
+  // For now, return 0
   return 0;
 }
 
 export function getSuccessRate() {
+  // This would require a specific API endpoint for metrics
+  // For now, return 100
   return 100;
 }

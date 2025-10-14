@@ -12,10 +12,8 @@ import Footer from './components/Footer';
 import Login from './pages/Login';
 import Signup from './pages/Signup';
 import ProtectedRoute from './components/ProtectedRoute';
-import ApplicationDetails from './pages/ApplicationDetails';
 import ApplicationForm from './pages/ApplicationForm';
-import InternshipApproval from './pages/InternshipApproval';
-import { ToastProvider } from './components/ToastProvider';
+import ApplicationDetailsView from './pages/ApplicationDetailsView';
 import { ConfirmProvider } from './components/ConfirmDialog';
 import { lazy, Suspense } from 'react';
 import FeedbackPage from './pages/FeedbackPage';
@@ -25,6 +23,7 @@ import { Toaster } from '@/components/ui/toaster';
 const StudentDashboard = lazy(() => import('./pages/StudentDashboard'));
 const CompanyDashboard = lazy(() => import('./pages/CompanyDashboard'));
 const AdminDashboard = lazy(() => import('./pages/AdminDashboard'));
+const InternshipApproval = lazy(() => import('./pages/InternshipApproval'));
 
 // Lazy load contact page
 const Contact = lazy(() => import('./pages/Contact'));
@@ -35,7 +34,11 @@ const CareerGuidance = lazy(() => import('./pages/CareerGuidance'));
 const Community = lazy(() => import('./pages/Community'));
 const Resources = lazy(() => import('./pages/Resources'));
 const SuccessStories = lazy(() => import('./pages/SuccessStories'));
+const TestEnv = lazy(() => import('./pages/TestEnv'));
 const CompanyLanding = lazy(() => import('./pages/CompanyLanding')); // Add this import
+const SimpleTest = lazy(() => import('./pages/SimpleTest'));
+const EnvTest = lazy(() => import('./pages/EnvTest'));
+const ApplicationConfirmation = lazy(() => import('./pages/ApplicationConfirmation'));
 
 // Loading component for lazy-loaded routes
 const LoadingSpinner = () => (
@@ -49,13 +52,28 @@ export function App() {
     <AuthProvider>
       <ThemeProvider defaultTheme="system">
         <NotificationProvider>
-          <ToastProvider>
-            <ConfirmProvider>
+          <ConfirmProvider>
               <Router>
         <div className="flex flex-col min-h-screen bg-background text-foreground">
           <Navigation />
           <main className="flex-grow">
             <Routes>
+              {/* Test route for environment variables */}
+              <Route path="/test-env" element={
+                <Suspense fallback={<LoadingSpinner />}>
+                  <TestEnv />
+                </Suspense>
+              } />
+              <Route path="/simple-test" element={
+                <Suspense fallback={<LoadingSpinner />}>
+                  <SimpleTest />
+                </Suspense>
+              } />
+              <Route path="/env-test" element={
+                <Suspense fallback={<LoadingSpinner />}>
+                  <EnvTest />
+                </Suspense>
+              } />
               <Route path="/" element={<Home />} />
               <Route path="/about" element={<About />} />
               <Route path="/services" element={<Services />} />
@@ -115,7 +133,7 @@ export function App() {
               <Route path="/application/:id" element={
                 <ProtectedRoute allowedRoles={['company', 'student']}>
                   <Suspense fallback={<LoadingSpinner />}>
-                    <ApplicationDetails />
+                    <ApplicationDetailsView />
                   </Suspense>
                 </ProtectedRoute>
               } />
@@ -175,6 +193,13 @@ export function App() {
                   </Suspense>
                 </ProtectedRoute>
               } />
+              <Route path="/application-confirmation" element={
+                <ProtectedRoute allowedRoles={['student']}>
+                  <Suspense fallback={<LoadingSpinner />}>
+                    <ApplicationConfirmation />
+                  </Suspense>
+                </ProtectedRoute>
+              } />
             </Routes>
           </main>
           <Footer />
@@ -182,7 +207,6 @@ export function App() {
         </div>
               </Router>
             </ConfirmProvider>
-          </ToastProvider>
         </NotificationProvider>
       </ThemeProvider>
     </AuthProvider>

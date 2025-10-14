@@ -1,7 +1,165 @@
+import { useState, useEffect } from 'react';
 import { UserIcon, BuildingIcon, CheckCircleIcon, BrainIcon, RocketIcon, StarIcon, SearchIcon, TargetIcon, ClipboardIcon, TrendingUpIcon } from 'lucide-react';
 import { Link } from 'react-router-dom';
+import { servicesAPI } from '../lib/new-api-client';
+import { toast } from '@/hooks/use-toast';
 
 const Services = () => {
+  const [content, setContent] = useState({
+    studentServices: [
+      {
+        title: "Internship Discovery",
+        description: "Access thousands of verified internship opportunities across all industries"
+      },
+      {
+        title: "Profile Optimization",
+        description: "AI-powered suggestions to enhance your profile and stand out to employers"
+      },
+      {
+        title: "Application Tracking",
+        description: "Monitor your application status and receive real-time updates"
+      },
+      {
+        title: "Career Guidance",
+        description: "Expert advice and resources to help you make informed career decisions"
+      }
+    ],
+    companyServices: [
+      {
+        title: "Talent Acquisition",
+        description: "Access a diverse pool of pre-vetted students from top universities"
+      },
+      {
+        title: "Smart Matching",
+        description: "AI-powered algorithms to find the best candidates for your positions"
+      },
+      {
+        title: "Application Management",
+        description: "Streamlined dashboard to review, filter, and manage all applications"
+      },
+      {
+        title: "Brand Building",
+        description: "Showcase your company culture and attract top talent to your organization"
+      }
+    ],
+    premiumServices: [
+      {
+        title: "Skills Assessment",
+        description: "Comprehensive skill evaluations to help students identify strengths and companies find the right talent.",
+        features: [
+          "Technical skill testing",
+          "Soft skills evaluation",
+          "Industry-specific assessments",
+          "Detailed performance reports"
+        ],
+        icon: "BrainIcon"
+      },
+      {
+        title: "Fast Placement",
+        description: "Quick and efficient matching process that gets students placed in internships within days, not weeks.",
+        features: [
+          "Priority application processing",
+          "Direct company connections",
+          "Expedited interview scheduling",
+          "Real-time status updates"
+        ],
+        icon: "RocketIcon"
+      },
+      {
+        title: "Success Support",
+        description: "Ongoing mentorship and support throughout the internship journey to ensure mutual success.",
+        features: [
+          "Dedicated success manager",
+          "Weekly check-ins",
+          "Performance feedback",
+          "Career development planning"
+        ],
+        icon: "StarIcon"
+      }
+    ],
+    howItWorks: [
+      {
+        step: 1,
+        title: "Explore",
+        description: "Browse through thousands of internship opportunities filtered by your preferences",
+        icon: "SearchIcon"
+      },
+      {
+        step: 2,
+        title: "Match",
+        description: "Our AI algorithm matches you with the most suitable opportunities based on your profile",
+        icon: "TargetIcon"
+      },
+      {
+        step: 3,
+        title: "Apply",
+        description: "Submit applications with one click and track your progress in real-time",
+        icon: "ClipboardIcon"
+      },
+      {
+        step: 4,
+        title: "Succeed",
+        description: "Get matched with your ideal internship and receive ongoing support for success",
+        icon: "TrendingUpIcon"
+      }
+    ],
+    stats: [
+      { value: "10K+", label: "Internship Opportunities", description: "From top companies worldwide" },
+      { value: "5K+", label: "Successful Placements", description: "Students placed in dream roles" },
+      { value: "95%", label: "Satisfaction Rate", description: "Of students and employers" }
+    ]
+  });
+  
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchContent = async () => {
+      try {
+        const response = await servicesAPI.getContent();
+        setContent(response.data.data);
+      } catch (error: any) {
+        console.error('Failed to fetch services content:', error);
+        toast({
+          title: "Error",
+          description: "Failed to load services content. Using default content.",
+          variant: "destructive",
+        });
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchContent();
+  }, []);
+
+  // Map icon names to actual components
+  const getIconComponent = (iconName: string) => {
+    switch (iconName) {
+      case 'UserIcon': return UserIcon;
+      case 'BuildingIcon': return BuildingIcon;
+      case 'CheckCircleIcon': return CheckCircleIcon;
+      case 'BrainIcon': return BrainIcon;
+      case 'RocketIcon': return RocketIcon;
+      case 'StarIcon': return StarIcon;
+      case 'SearchIcon': return SearchIcon;
+      case 'TargetIcon': return TargetIcon;
+      case 'ClipboardIcon': return ClipboardIcon;
+      case 'TrendingUpIcon': return TrendingUpIcon;
+      default: return UserIcon;
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-background text-foreground flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
+          <p className="text-muted-foreground">Loading services content...</p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-background text-foreground">
       {/* Hero Section */}
@@ -116,45 +274,17 @@ const Services = () => {
                 </div>
                 
                 <div className="space-y-6">
-                  <div className="flex items-start">
-                    <div className="w-6 h-6 bg-primary/10 rounded-full flex items-center justify-center mr-3 mt-1 flex-shrink-0 transition-colors duration-300">
-                      <CheckCircleIcon size={16} className="text-primary" />
+                  {content.studentServices.map((service, index) => (
+                    <div className="flex items-start" key={index}>
+                      <div className="w-6 h-6 bg-primary/10 rounded-full flex items-center justify-center mr-3 mt-1 flex-shrink-0 transition-colors duration-300">
+                        <CheckCircleIcon size={16} className="text-primary" />
+                      </div>
+                      <div>
+                        <h4 className="font-bold text-foreground mb-1">{service.title}</h4>
+                        <p className="text-muted-foreground text-sm leading-relaxed">{service.description}</p>
+                      </div>
                     </div>
-                    <div>
-                      <h4 className="font-bold text-foreground mb-1">Internship Discovery</h4>
-                      <p className="text-muted-foreground text-sm leading-relaxed">Access thousands of verified internship opportunities across all industries</p>
-                    </div>
-                  </div>
-                  
-                  <div className="flex items-start">
-                    <div className="w-6 h-6 bg-primary/10 rounded-full flex items-center justify-center mr-3 mt-1 flex-shrink-0 transition-colors duration-300">
-                      <CheckCircleIcon size={16} className="text-primary" />
-                    </div>
-                    <div>
-                      <h4 className="font-bold text-foreground mb-1">Profile Optimization</h4>
-                      <p className="text-muted-foreground text-sm leading-relaxed">AI-powered suggestions to enhance your profile and stand out to employers</p>
-                    </div>
-                  </div>
-                  
-                  <div className="flex items-start">
-                    <div className="w-6 h-6 bg-primary/10 rounded-full flex items-center justify-center mr-3 mt-1 flex-shrink-0 transition-colors duration-300">
-                      <CheckCircleIcon size={16} className="text-primary" />
-                    </div>
-                    <div>
-                      <h4 className="font-bold text-foreground mb-1">Application Tracking</h4>
-                      <p className="text-muted-foreground text-sm leading-relaxed">Monitor your application status and receive real-time updates</p>
-                    </div>
-                  </div>
-                  
-                  <div className="flex items-start">
-                    <div className="w-6 h-6 bg-primary/10 rounded-full flex items-center justify-center mr-3 mt-1 flex-shrink-0 transition-colors duration-300">
-                      <CheckCircleIcon size={16} className="text-primary" />
-                    </div>
-                    <div>
-                      <h4 className="font-bold text-foreground mb-1">Career Guidance</h4>
-                      <p className="text-muted-foreground text-sm leading-relaxed">Expert advice and resources to help you make informed career decisions</p>
-                    </div>
-                  </div>
+                  ))}
                 </div>
                 
                 <div className="mt-8">
@@ -178,45 +308,17 @@ const Services = () => {
                 </div>
                 
                 <div className="space-y-6">
-                  <div className="flex items-start">
-                    <div className="w-6 h-6 bg-primary/10 rounded-full flex items-center justify-center mr-3 mt-1 flex-shrink-0 transition-colors duration-300">
-                      <CheckCircleIcon size={16} className="text-primary" />
+                  {content.companyServices.map((service, index) => (
+                    <div className="flex items-start" key={index}>
+                      <div className="w-6 h-6 bg-primary/10 rounded-full flex items-center justify-center mr-3 mt-1 flex-shrink-0 transition-colors duration-300">
+                        <CheckCircleIcon size={16} className="text-primary" />
+                      </div>
+                      <div>
+                        <h4 className="font-bold text-foreground mb-1">{service.title}</h4>
+                        <p className="text-muted-foreground text-sm leading-relaxed">{service.description}</p>
+                      </div>
                     </div>
-                    <div>
-                      <h4 className="font-bold text-foreground mb-1">Talent Acquisition</h4>
-                      <p className="text-muted-foreground text-sm leading-relaxed">Access a diverse pool of pre-vetted students from top universities</p>
-                    </div>
-                  </div>
-                  
-                  <div className="flex items-start">
-                    <div className="w-6 h-6 bg-primary/10 rounded-full flex items-center justify-center mr-3 mt-1 flex-shrink-0 transition-colors duration-300">
-                      <CheckCircleIcon size={16} className="text-primary" />
-                    </div>
-                    <div>
-                      <h4 className="font-bold text-foreground mb-1">Smart Matching</h4>
-                      <p className="text-muted-foreground text-sm leading-relaxed">AI-powered algorithms to find the best candidates for your positions</p>
-                    </div>
-                  </div>
-                  
-                  <div className="flex items-start">
-                    <div className="w-6 h-6 bg-primary/10 rounded-full flex items-center justify-center mr-3 mt-1 flex-shrink-0 transition-colors duration-300">
-                      <CheckCircleIcon size={16} className="text-primary" />
-                    </div>
-                    <div>
-                      <h4 className="font-bold text-foreground mb-1">Application Management</h4>
-                      <p className="text-muted-foreground text-sm leading-relaxed">Streamlined dashboard to review, filter, and manage all applications</p>
-                    </div>
-                  </div>
-                  
-                  <div className="flex items-start">
-                    <div className="w-6 h-6 bg-primary/10 rounded-full flex items-center justify-center mr-3 mt-1 flex-shrink-0 transition-colors duration-300">
-                      <CheckCircleIcon size={16} className="text-primary" />
-                    </div>
-                    <div>
-                      <h4 className="font-bold text-foreground mb-1">Brand Building</h4>
-                      <p className="text-muted-foreground text-sm leading-relaxed">Showcase your company culture and attract top talent to your organization</p>
-                    </div>
-                  </div>
+                  ))}
                 </div>
                 
                 <div className="mt-8">
@@ -247,68 +349,41 @@ const Services = () => {
           </div>
           
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-            <div className="bg-card rounded-xl shadow-sm hover:shadow-lg transition-all duration-300 p-8 text-center border border-border relative group overflow-hidden hover:border-primary">
-              {/* Decorative element */}
-              <div className="absolute top-0 right-0 w-20 h-20 bg-primary/5 rounded-bl-full"></div>
-              <div className="relative z-10">
-                <div className="w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center mb-6 mx-auto text-primary group-hover:bg-primary/20 transition-colors duration-300">
-                  <BrainIcon size={32} />
+            {content.premiumServices.map((service, index) => {
+              const IconComponent = getIconComponent(service.icon);
+              const bgColorClasses = [
+                'bg-primary/10 text-primary group-hover:bg-primary/20',
+                'bg-secondary/10 text-secondary group-hover:bg-secondary/20',
+                'bg-accent/10 text-accent group-hover:bg-accent/20'
+              ];
+              
+              return (
+                <div 
+                  key={index} 
+                  className="bg-card rounded-xl shadow-sm hover:shadow-lg transition-all duration-300 p-8 text-center border border-border relative group overflow-hidden hover:border-primary"
+                >
+                  {/* Decorative element */}
+                  <div className="absolute top-0 right-0 w-20 h-20 bg-primary/5 rounded-bl-full"></div>
+                  <div className="relative z-10">
+                    <div className={`w-16 h-16 ${bgColorClasses[index % bgColorClasses.length]} rounded-full flex items-center justify-center mb-6 mx-auto transition-colors duration-300`}>
+                      <IconComponent size={32} />
+                    </div>
+                    <h3 className="text-2xl font-bold text-foreground mb-4">{service.title}</h3>
+                    <p className="text-muted-foreground mb-6 leading-relaxed">
+                      {service.description}
+                    </p>
+                    <ul className="text-sm text-muted-foreground space-y-3 mb-6 text-left">
+                      {service.features.map((feature, featureIndex) => (
+                        <li key={featureIndex} className="flex items-center">
+                          <span className="w-2 h-2 bg-primary rounded-full mr-3"></span>
+                          {feature}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
                 </div>
-                <h3 className="text-2xl font-bold text-foreground mb-4">Skills Assessment</h3>
-                <p className="text-muted-foreground mb-6 leading-relaxed">
-                  Comprehensive skill evaluations to help students identify strengths 
-                  and companies find the right talent.
-                </p>
-                <ul className="text-sm text-muted-foreground space-y-3 mb-6 text-left">
-                  <li className="flex items-center"><span className="w-2 h-2 bg-primary rounded-full mr-3"></span>Technical skill testing</li>
-                  <li className="flex items-center"><span className="w-2 h-2 bg-primary rounded-full mr-3"></span>Soft skills evaluation</li>
-                  <li className="flex items-center"><span className="w-2 h-2 bg-primary rounded-full mr-3"></span>Industry-specific assessments</li>
-                  <li className="flex items-center"><span className="w-2 h-2 bg-primary rounded-full mr-3"></span>Detailed performance reports</li>
-                </ul>
-              </div>
-            </div>
-            
-            <div className="bg-card rounded-xl shadow-sm hover:shadow-lg transition-all duration-300 p-8 text-center border border-border relative group overflow-hidden hover:border-primary">
-              {/* Decorative element */}
-              <div className="absolute top-0 right-0 w-20 h-20 bg-secondary/10 rounded-bl-full"></div>
-              <div className="relative z-10">
-                <div className="w-16 h-16 bg-secondary/10 rounded-full flex items-center justify-center mb-6 mx-auto text-secondary group-hover:bg-secondary/20 transition-colors duration-300">
-                  <RocketIcon size={32} />
-                </div>
-                <h3 className="text-2xl font-bold text-foreground mb-4">Fast Placement</h3>
-                <p className="text-muted-foreground mb-6 leading-relaxed">
-                  Quick and efficient matching process that gets students placed 
-                  in internships within days, not weeks.
-                </p>
-                <ul className="text-sm text-muted-foreground space-y-3 mb-6 text-left">
-                  <li className="flex items-center"><span className="w-2 h-2 bg-secondary rounded-full mr-3"></span>Priority application processing</li>
-                  <li className="flex items-center"><span className="w-2 h-2 bg-secondary rounded-full mr-3"></span>Direct company connections</li>
-                  <li className="flex items-center"><span className="w-2 h-2 bg-secondary rounded-full mr-3"></span>Expedited interview scheduling</li>
-                  <li className="flex items-center"><span className="w-2 h-2 bg-secondary rounded-full mr-3"></span>Real-time status updates</li>
-                </ul>
-              </div>
-            </div>
-            
-            <div className="bg-card rounded-xl shadow-sm hover:shadow-lg transition-all duration-300 p-8 text-center border border-border relative group overflow-hidden hover:border-primary">
-              {/* Decorative element */}
-              <div className="absolute top-0 right-0 w-20 h-20 bg-accent rounded-bl-full"></div>
-              <div className="relative z-10">
-                <div className="w-16 h-16 bg-accent/10 rounded-full flex items-center justify-center mb-6 mx-auto text-accent group-hover:bg-accent/20 transition-colors duration-300">
-                  <StarIcon size={32} />
-                </div>
-                <h3 className="text-2xl font-bold text-foreground mb-4">Success Support</h3>
-                <p className="text-muted-foreground mb-6 leading-relaxed">
-                  Ongoing mentorship and support throughout the internship journey 
-                  to ensure mutual success.
-                </p>
-                <ul className="text-sm text-muted-foreground space-y-3 mb-6 text-left">
-                  <li className="flex items-center"><span className="w-2 h-2 bg-accent rounded-full mr-3"></span>Dedicated success manager</li>
-                  <li className="flex items-center"><span className="w-2 h-2 bg-accent rounded-full mr-3"></span>Weekly check-ins</li>
-                  <li className="flex items-center"><span className="w-2 h-2 bg-accent rounded-full mr-3"></span>Performance feedback</li>
-                  <li className="flex items-center"><span className="w-2 h-2 bg-accent rounded-full mr-3"></span>Career development planning</li>
-                </ul>
-              </div>
-            </div>
+              );
+            })}
           </div>
         </div>
       </section>
@@ -335,69 +410,49 @@ const Services = () => {
             <div className="hidden md:block absolute top-16 left-0 right-0 h-1 bg-gradient-to-r from-primary to-secondary z-0"></div>
             
             <div className="grid grid-cols-1 md:grid-cols-4 gap-8 relative z-10">
-              {/* Step 1 */}
-              <div className="bg-card rounded-xl shadow-sm hover:shadow-lg transition-all duration-300 p-8 text-center border border-border relative group hover:border-primary">
-                <div className="absolute -top-4 left-1/2 transform -translate-x-1/2 w-12 h-12 bg-primary rounded-full flex items-center justify-center text-primary-foreground font-bold text-lg border-4 border-background shadow-lg group-hover:scale-110 transition-transform duration-300">
-                  1
-                </div>
-                <div className="pt-8">
-                  <div className="w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center mb-6 mx-auto text-primary group-hover:bg-primary/20 transition-colors duration-300">
-                    <SearchIcon size={32} />
+              {content.howItWorks.map((step, index) => {
+                const IconComponent = getIconComponent(step.icon);
+                const bgColorClasses = [
+                  'bg-primary',
+                  'bg-secondary',
+                  'bg-accent',
+                  'bg-destructive'
+                ];
+                
+                const textColorClasses = [
+                  'text-primary-foreground',
+                  'text-secondary-foreground',
+                  'text-accent-foreground',
+                  'text-destructive-foreground'
+                ];
+                
+                const hoverBgClasses = [
+                  'group-hover:bg-primary/20',
+                  'group-hover:bg-secondary/20',
+                  'group-hover:bg-accent/20',
+                  'group-hover:bg-destructive/20'
+                ];
+                
+                return (
+                  <div 
+                    key={index} 
+                    className="bg-card rounded-xl shadow-sm hover:shadow-lg transition-all duration-300 p-8 text-center border border-border relative group hover:border-primary"
+                  >
+                    <div className={`absolute -top-4 left-1/2 transform -translate-x-1/2 w-12 h-12 ${bgColorClasses[index % bgColorClasses.length]} rounded-full flex items-center justify-center ${textColorClasses[index % textColorClasses.length]} font-bold text-lg border-4 border-background shadow-lg group-hover:scale-110 transition-transform duration-300`}>
+                      {step.step}
+                    </div>
+                    <div className="pt-8">
+                      <div className={`w-16 h-16 ${bgColorClasses[index % bgColorClasses.length]}/10 rounded-full flex items-center justify-center mb-6 mx-auto ${textColorClasses[index % textColorClasses.length]} ${hoverBgClasses[index % hoverBgClasses.length]} transition-colors duration-300`}>
+                        <IconComponent size={32} />
+                      </div>
+                      <h3 className="text-2xl font-bold text-foreground mb-4">{step.title}</h3>
+                      <p className="text-muted-foreground leading-relaxed">
+                        {step.description}
+                      </p>
+                    </div>
                   </div>
-                  <h3 className="text-2xl font-bold text-foreground mb-4">Explore</h3>
-                  <p className="text-muted-foreground leading-relaxed">
-                    Browse through thousands of internship opportunities filtered by your preferences
-                  </p>
-                </div>
-              </div>
-              
-              {/* Step 2 */}
-              <div className="bg-card rounded-xl shadow-sm hover:shadow-lg transition-all duration-300 p-8 text-center border border-border relative group hover:border-primary">
-                <div className="absolute -top-4 left-1/2 transform -translate-x-1/2 w-12 h-12 bg-secondary rounded-full flex items-center justify-center text-secondary-foreground font-bold text-lg border-4 border-background shadow-lg group-hover:scale-110 transition-transform duration-300">
-                  2
-                </div>
-                <div className="pt-8">
-                  <div className="w-16 h-16 bg-secondary/10 rounded-full flex items-center justify-center mb-6 mx-auto text-secondary group-hover:bg-secondary/20 transition-colors duration-300">
-                    <TargetIcon size={32} />
-                  </div>
-                  <h3 className="text-2xl font-bold text-foreground mb-4">Match</h3>
-                  <p className="text-muted-foreground leading-relaxed">
-                    Our AI algorithm matches you with the most suitable opportunities based on your profile
-                  </p>
-                </div>
-              </div>
-              
-              {/* Step 3 */}
-              <div className="bg-card rounded-xl shadow-sm hover:shadow-lg transition-all duration-300 p-8 text-center border border-border relative group hover:border-primary">
-                <div className="absolute -top-4 left-1/2 transform -translate-x-1/2 w-12 h-12 bg-accent rounded-full flex items-center justify-center text-accent-foreground font-bold text-lg border-4 border-background shadow-lg group-hover:scale-110 transition-transform duration-300">
-                  3
-                </div>
-                <div className="pt-8">
-                  <div className="w-16 h-16 bg-accent/10 rounded-full flex items-center justify-center mb-6 mx-auto text-accent group-hover:bg-accent/20 transition-colors duration-300">
-                    <ClipboardIcon size={32} />
-                  </div>
-                  <h3 className="text-2xl font-bold text-foreground mb-4">Apply</h3>
-                  <p className="text-muted-foreground leading-relaxed">
-                    Submit applications with one click and track your progress in real-time
-                  </p>
-                </div>
-              </div>
-              
-              {/* Step 4 */}
-              <div className="bg-card rounded-xl shadow-sm hover:shadow-lg transition-all duration-300 p-8 text-center border border-border relative group hover:border-primary">
-                <div className="absolute -top-4 left-1/2 transform -translate-x-1/2 w-12 h-12 bg-destructive rounded-full flex items-center justify-center text-destructive-foreground font-bold text-lg border-4 border-background shadow-lg group-hover:scale-110 transition-transform duration-300">
-                  4
-                </div>
-                <div className="pt-8">
-                  <div className="w-16 h-16 bg-destructive/10 rounded-full flex items-center justify-center mb-6 mx-auto text-destructive group-hover:bg-destructive/20 transition-colors duration-300">
-                    <TrendingUpIcon size={32} />
-                  </div>
-                  <h3 className="text-2xl font-bold text-foreground mb-4">Succeed</h3>
-                  <p className="text-muted-foreground leading-relaxed">
-                    Get matched with your ideal internship and receive ongoing support for success
-                  </p>
-                </div>
-              </div>
+                );
+              })}
             </div>
           </div>
         </div>
@@ -428,21 +483,16 @@ const Services = () => {
             
             {/* Stats Section */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6 md:gap-8 mb-16">
-              <div className="bg-card/80 backdrop-blur-sm rounded-xl p-6 border border-border hover:bg-card transition-all duration-300 shadow-sm">
-                <div className="text-3xl md:text-4xl font-bold mb-2 text-foreground">10K+</div>
-                <div className="text-base md:text-lg text-foreground">Internship Opportunities</div>
-                <div className="text-xs md:text-sm mt-2 text-muted-foreground">From top companies worldwide</div>
-              </div>
-              <div className="bg-card/80 backdrop-blur-sm rounded-xl p-6 border border-border hover:bg-card transition-all duration-300 shadow-sm">
-                <div className="text-3xl md:text-4xl font-bold mb-2 text-foreground">5K+</div>
-                <div className="text-base md:text-lg text-foreground">Successful Placements</div>
-                <div className="text-xs md:text-sm mt-2 text-muted-foreground">Students placed in dream roles</div>
-              </div>
-              <div className="bg-card/80 backdrop-blur-sm rounded-xl p-6 border border-border hover:bg-card transition-all duration-300 shadow-sm">
-                <div className="text-3xl md:text-4xl font-bold mb-2 text-foreground">95%</div>
-                <div className="text-base md:text-lg text-foreground">Satisfaction Rate</div>
-                <div className="text-xs md:text-sm mt-2 text-muted-foreground">Of students and employers</div>
-              </div>
+              {content.stats.map((stat, index) => (
+                <div 
+                  key={index} 
+                  className="bg-card/80 backdrop-blur-sm rounded-xl p-6 border border-border hover:bg-card transition-all duration-300 shadow-sm"
+                >
+                  <div className="text-3xl md:text-4xl font-bold mb-2 text-foreground">{stat.value}</div>
+                  <div className="text-base md:text-lg text-foreground">{stat.label}</div>
+                  <div className="text-xs md:text-sm mt-2 text-muted-foreground">{stat.description}</div>
+                </div>
+              ))}
             </div>
             
             <div className="flex flex-col sm:flex-row justify-center space-y-4 sm:space-y-0 sm:space-x-6">

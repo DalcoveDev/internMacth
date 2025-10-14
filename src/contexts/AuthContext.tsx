@@ -1,4 +1,6 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import { toast } from '@/hooks/use-toast';
+import { authAPI, setAuthToken, clearAuthToken } from '@/lib/new-api-client';
 
 // User interface
 export interface User {
@@ -56,88 +58,163 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   }, []);
 
   // Check authentication status
-  const checkAuth = () => {
+  const checkAuth = async () => {
     try {
-      const storedUser = localStorage.getItem('user');
       const storedToken = localStorage.getItem('token');
       
-      if (storedUser && storedToken) {
-        const userData = JSON.parse(storedUser);
-        setUser(userData);
+      if (storedToken) {
+        // Set token in API client
+        setAuthToken(storedToken);
+        
+        // Verify token by getting user profile
+        const response = await authAPI.getProfile();
+        setUser(response.data.data.user);
       }
-    } catch (error) {
-      console.error('Error parsing stored user data:', error);
-      localStorage.removeItem('user');
-      localStorage.removeItem('token');
+    } catch (error: any) {
+      console.error('Error verifying authentication:', error);
+      // Clear invalid token
+      clearAuthToken();
     } finally {
       setLoading(false);
     }
   };
 
-  // Mock login function
+  // Login function
   const login = async (credentials: { email: string; password: string; role: string }) => {
     try {
       setLoading(true);
       setError(null);
 
-      // Simulate network delay
-      await new Promise(resolve => setTimeout(resolve, 800));
+      // Enhanced validation
+      if (!credentials.email || !credentials.password) {
+        throw new Error('Email and password are required');
+      }
 
-      // Create mock user data
-      const mockUser: User = {
-        id: Date.now(),
-        name: credentials.email.split('@')[0],
-        email: credentials.email.toLowerCase(),
-        role: credentials.role as 'student' | 'company' | 'admin',
-        status: 'active',
-        createdAt: new Date().toISOString()
-      };
+      if (!credentials.email.includes('@')) {
+        throw new Error('Please enter a valid email address');
+      }
 
-      // Store in localStorage
-      localStorage.setItem('user', JSON.stringify(mockUser));
-      localStorage.setItem('token', 'mock_token_' + Date.now());
+      if (credentials.password.length < 6) {
+        throw new Error('Password must be at least 6 characters');
+      }
+
+      // Call real API
+      const response = await authAPI.login(credentials);
+      
+      // Set token in API client
+      setAuthToken(response.data.data.token);
       
       // Update state
-      setUser(mockUser);
+      setUser(response.data.data.user);
+      
+      // Show success toast
+      toast({
+        title: "Login Successful",
+        description: `Welcome back, ${response.data.data.user.name}!`,
+      });
       
     } catch (error: any) {
       console.error('Login error:', error);
-      setError('Login failed. Please try again.');
+      let errorMessage = 'Login failed. Please try again.';
+      
+      // More detailed error handling
+      if (error.response?.status === 401) {
+        errorMessage = 'Invalid email or password. Please check your credentials.';
+      } else if (error.response?.data?.error?.message) {
+        errorMessage = error.response.data.error.message;
+      } else if (error.message) {
+        errorMessage = error.message;
+      }
+      
+      setError(errorMessage);
+      
+      // Show error toast
+      toast({
+        title: "Login Failed",
+        description: errorMessage,
+        variant: "destructive",
+      });
+      
       throw error;
     } finally {
       setLoading(false);
     }
   };
 
-  // Mock signup function
+  // Signup function
   const signup = async (userData: { name: string; email: string; password: string; role: string }) => {
     try {
       setLoading(true);
       setError(null);
 
-      // Simulate network delay
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      // Enhanced validation
+      if (!userData.name?.trim() || !userData.email?.trim() || !userData.password) {
+        throw new Error('All fields are required');
+      }
 
-      // Create mock user data
-      const mockUser: User = {
-        id: Date.now(),
-        name: userData.name.trim(),
-        email: userData.email.toLowerCase(),
-        role: userData.role as 'student' | 'company' | 'admin',
-        status: 'active',
-        createdAt: new Date().toISOString()
-      };
+      if (userData.name.trim().length < 2) {
+        throw new Error('Name must be at least 2 characters long');
+      }
 
-      // Store in localStorage
-      localStorage.setItem('user', JSON.stringify(mockUser));
-      localStorage.setItem('token', 'mock_token_' + Date.now());
+      if (!userData.email.includes('@') || !userData.email.includes('.')) {
+        throw new Error('Please enter a valid email address');
+      }
+
+      if (userData.password.length < 8) {
+        throw new Error('Password must be at least 8 characters long');
+      }
+
+      // Check password strength
+      const hasNumber = /\d/.test(userData.password);
+      const hasLetter = /[a-zA-Z]/.test(userData.password);
+      if (!hasNumber || !hasLetter) {
+        throw new Error('Password must contain both letters and numbers');
+      }
+
+      // Call real API
+      const response = await authAPI.register(userData);
+      
+      // Set token in API client
+      setAuthToken(response.data.data.token);
       
       // Update state
-      setUser(mockUser);
+      setUser(response.data.data.user);
+      
+      // Show success toast
+      toast({
+        title: "Account Created",
+        description: "Your account has been successfully created!",
+      });
       
     } catch (error: any) {
       console.error('Signup error:', error);
-      setError('Signup failed. Please try again.');
+      let errorMessage = 'Signup failed. Please try again.';
+      
+      // More detailed error handling
+      if (error.response?.status === 400) {
+        if (error.response.data?.error?.details) {
+          // Validation errors
+          errorMessage = error.response.data.error.details.map((err: any) => err.msg).join(', ');
+        } else if (error.response.data?.error?.message) {
+          errorMessage = error.response.data.error.message;
+        } else {
+          errorMessage = 'Invalid input data. Please check your information.';
+        }
+      } else if (error.response?.data?.error?.message) {
+        errorMessage = error.response.data.error.message;
+      } else if (error.message) {
+        errorMessage = error.message;
+      }
+      
+      setError(errorMessage);
+      
+      // Show error toast
+      toast({
+        title: "Signup Failed",
+        description: errorMessage,
+        variant: "destructive",
+      });
+      
       throw error;
     } finally {
       setLoading(false);
@@ -148,8 +225,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const logout = () => {
     setUser(null);
     setError(null);
-    localStorage.removeItem('user');
-    localStorage.removeItem('token');
+    clearAuthToken();
     
     // Clear any draft data
     const keys = Object.keys(localStorage);

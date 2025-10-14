@@ -1,7 +1,11 @@
 import { useEffect, useState, useMemo, useCallback } from 'react';
+import { Link } from 'react-router-dom';
 import SearchBar from '../components/SearchBar';
 import InternshipCard from '../components/InternshipCard';
 import { FilterIcon, SearchIcon } from 'lucide-react';
+// Import the real API client
+import { internshipsAPI } from '@/lib/new-api-client';
+import { useToast } from '@/hooks/use-toast';
 
 interface Internship {
   id: number;
@@ -17,116 +21,127 @@ interface Internship {
   logoUrl: string;
 }
 
+interface Pagination {
+  page: number;
+  limit: number;
+  total: number;
+  totalPages: number;
+  hasNext: boolean;
+  hasPrev: boolean;
+}
+
 const Search = () => {
+  const { toast } = useToast();
   const [internships, setInternships] = useState<Internship[]>([]);
-  const [allInternships, setAllInternships] = useState<Internship[]>([]);
+  const [pagination, setPagination] = useState<Pagination>({
+    page: 1,
+    limit: 10,
+    total: 0,
+    totalPages: 0,
+    hasNext: false,
+    hasPrev: false
+  });
   const [isFilterOpen, setIsFilterOpen] = useState(false);
   const [filters, setFilters] = useState({
     type: [] as string[],
     duration: [] as string[]
   });
+  const [searchParams, setSearchParams] = useState({
+    query: '',
+    location: ''
+  });
   const [loading, setLoading] = useState(true);
 
-  // Generate mock internships data
-  const generateMockInternships = (): Internship[] => {
-    return [
-      {
-        id: 1,
-        title: 'Software Development Intern',
-        company: 'Tech Innovations Inc.',
-        location: 'San Francisco, CA',
-        type: 'Full-time',
-        duration: '3 months',
-        description: "Join our engineering team to develop cutting-edge web applications using React and Node.js. You'll work directly with senior developers on real projects.",
-        requirements: ['React', 'JavaScript', 'Node.js'],
-        postedDate: '2023-05-15',
-        deadline: '2023-06-30',
-        logoUrl: 'https://images.unsplash.com/photo-1549921296-3b0f9a35af35?ixlib=rb-1.2.1&auto=format&fit=crop&w=1000&q=80'
-      },
-      {
-        id: 2,
-        title: 'Marketing Intern',
-        company: 'Global Media Group',
-        location: 'New York, NY',
-        type: 'Part-time',
-        duration: '6 months',
-        description: 'Assist our marketing team in developing and implementing digital marketing campaigns. Learn about SEO, content marketing, and social media strategy.',
-        requirements: ['Marketing', 'Social Media', 'Content Creation'],
-        postedDate: '2023-05-10',
-        deadline: '2023-07-15',
-        logoUrl: 'https://images.unsplash.com/photo-1563986768494-4dee2763ff3f?ixlib=rb-1.2.1&auto=format&fit=crop&w=1000&q=80'
-      },
-      {
-        id: 3,
-        title: 'Data Science Intern',
-        company: 'Analytics Pro',
-        location: 'Remote',
-        type: 'Full-time',
-        duration: '4 months',
-        description: 'Work with our data science team to analyze large datasets and build predictive models. Great opportunity to apply machine learning skills in a real-world setting.',
-        requirements: ['Python', 'Machine Learning', 'Data Analysis'],
-        postedDate: '2023-05-05',
-        deadline: '2023-06-25',
-        logoUrl: 'https://images.unsplash.com/photo-1542744173-8e7e53415bb0?ixlib=rb-1.2.1&auto=format&fit=crop&w=1000&q=80'
-      },
-      {
-        id: 4,
-        title: 'Graphic Design Intern',
-        company: 'Creative Studios',
-        location: 'Los Angeles, CA',
-        type: 'Part-time',
-        duration: '3 months',
-        description: 'Work with our creative team to design marketing materials, social media content, and brand assets. Experience with Adobe Creative Suite required.',
-        requirements: ['Adobe Photoshop', 'Illustrator', 'Design Principles'],
-        postedDate: '2023-05-12',
-        deadline: '2023-06-28',
-        logoUrl: 'https://images.unsplash.com/photo-1558655146-d09347e92766?ixlib=rb-1.2.1&auto=format&fit=crop&w=1000&q=80'
-      },
-      {
-        id: 5,
-        title: 'Finance Intern',
-        company: 'Global Financial Services',
-        location: 'Chicago, IL',
-        type: 'Full-time',
-        duration: '3 months',
-        description: 'Support our finance team with financial analysis, reporting, and modeling. Great opportunity to learn about investment banking and corporate finance.',
-        requirements: ['Excel', 'Financial Modeling', 'Analytical Skills'],
-        postedDate: '2023-05-08',
-        deadline: '2023-06-22',
-        logoUrl: 'https://images.unsplash.com/photo-1553877522-43269d4ea984?ixlib=rb-1.2.1&auto=format&fit=crop&w=1000&q=80'
-      }
-    ];
+  // Helper functions for showing toast notifications
+  const showError = (message: string, title: string = "Error") => {
+    toast({
+      title,
+      description: message,
+      variant: "destructive",
+    });
   };
 
   const handleSearch = useCallback((query: string, location: string) => {
-    let filtered = [...allInternships];
-    if (query) {
-      const lowerQuery = query.toLowerCase();
-      filtered = filtered.filter(internship => 
-        internship.title.toLowerCase().includes(lowerQuery) || 
-        internship.company.toLowerCase().includes(lowerQuery) || 
-        internship.description.toLowerCase().includes(lowerQuery)
-      );
+    setSearchParams({ query, location });
+    // Reset to first page when search changes
+    fetchInternships(1, query, location);
+  }, []);
+
+  const fetchInternships = useCallback(async (page: number = 1, searchQuery: string = searchParams.query, locationQuery: string = searchParams.location) => {
+    try {
+      setLoading(true);
+      
+      // Prepare API parameters
+      const params: any = {
+        page,
+        limit: pagination.limit
+      };
+      
+      // Add search parameters if they exist
+      if (searchQuery) {
+        params.search = searchQuery;
+      }
+      
+      if (locationQuery) {
+        params.location = locationQuery;
+      }
+      
+      // Add filter parameters if they exist
+      if (filters.type.length > 0) {
+        // Map frontend filter values to backend expected values
+        const backendTypes = filters.type.map(type => {
+          switch (type) {
+            case 'Full-time': return 'full-time';
+            case 'Part-time': return 'part-time';
+            default: return type.toLowerCase();
+          }
+        });
+        params.type = backendTypes.join(',');
+      }
+      
+      const response = await internshipsAPI.getAll(params);
+      const internshipsData = response.data.data?.internships || [];
+      const paginationData = response.data.data?.pagination || {};
+      
+      const transformedInternships: Internship[] = internshipsData.map((internship: any) => ({
+        id: internship.id,
+        title: internship.title,
+        company: internship.company_name || 'Unknown Company',
+        location: internship.location,
+        type: internship.type,
+        duration: internship.duration,
+        description: internship.description,
+        requirements: internship.requirements ? internship.requirements.split(',').map((req: string) => req.trim()) : [],
+        postedDate: internship.created_at,
+        deadline: internship.deadline,
+        logoUrl: internship.logo || 'https://images.unsplash.com/photo-1549921296-3b0f9a35af35?ixlib=rb-1.2.1&auto=format&fit=crop&w=1000&q=80'
+      }));
+      
+      setInternships(transformedInternships);
+      setPagination({
+        page: paginationData.page || 1,
+        limit: paginationData.limit || 10,
+        total: paginationData.total || 0,
+        totalPages: paginationData.totalPages || 0,
+        hasNext: paginationData.hasNext || false,
+        hasPrev: paginationData.hasPrev || false
+      });
+    } catch (error: any) {
+      console.error('Failed to fetch internships:', error);
+      let errorMessage = 'Failed to load internships. Please try again later.';
+      
+      if (error.response?.status === 500) {
+        errorMessage = 'Server error. Please try again later.';
+      } else if (error.message) {
+        errorMessage = error.message;
+      }
+      
+      showError(errorMessage);
+      setInternships([]);
+    } finally {
+      setLoading(false);
     }
-    if (location) {
-      const lowerLocation = location.toLowerCase();
-      filtered = filtered.filter(internship => 
-        internship.location.toLowerCase().includes(lowerLocation)
-      );
-    }
-    // Apply additional filters
-    if (filters.type.length > 0) {
-      filtered = filtered.filter(internship => 
-        filters.type.includes(internship.type)
-      );
-    }
-    if (filters.duration.length > 0) {
-      filtered = filtered.filter(internship => 
-        filters.duration.includes(internship.duration)
-      );
-    }
-    setInternships(filtered);
-  }, [allInternships, filters]);
+  }, [filters, searchParams, pagination.limit]);
 
   const toggleFilter = useCallback((category: 'type' | 'duration', value: string) => {
     setFilters(prev => {
@@ -146,33 +161,23 @@ const Search = () => {
 
   // Apply filters when they change
   useEffect(() => {
-    handleSearch('', '');
-  }, [filters, handleSearch]);
+    fetchInternships(1);
+  }, [filters, fetchInternships]);
 
-  // Initialize with mock data
+  // Handle pagination
+  const handlePageChange = (newPage: number) => {
+    fetchInternships(newPage);
+  };
+
+  // Initialize with real data
   useEffect(() => {
-    const initializeData = () => {
-      try {
-        setLoading(true);
-        const mockData = generateMockInternships();
-        setAllInternships(mockData);
-        setInternships(mockData);
-      } catch (error) {
-        console.error('Failed to initialize internships:', error);
-        setAllInternships([]);
-        setInternships([]);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    initializeData();
-  }, []);
+    fetchInternships();
+  }, [fetchInternships]);
 
   // Memoize the internship list to prevent unnecessary re-renders
   const internshipList = useMemo(() => internships, [internships]);
 
-  if (loading) {
+  if (loading && internships.length === 0) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
         <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary"></div>
@@ -399,16 +404,53 @@ const Search = () => {
             <div className="flex-1">
               <div className="flex items-center justify-between mb-6">
                 <h2 className="text-2xl font-bold text-foreground">
-                  {internshipList.length} {internshipList.length === 1 ? 'Result' : 'Results'}
+                  {pagination.total} {pagination.total === 1 ? 'Result' : 'Results'}
                 </h2>
               </div>
               
               {internshipList.length > 0 ? (
-                <div className="space-y-6">
-                  {internshipList.map(internship => (
-                    <InternshipCard key={internship.id} internship={internship} />
-                  ))}
-                </div>
+                <>
+                  <div className="grid grid-cols-1 gap-6">
+                    {internshipList.map(internship => (
+                      <InternshipCard key={internship.id} internship={internship} />
+                    ))}
+                  </div>
+                  
+                  {/* Pagination */}
+                  {pagination.totalPages > 1 && (
+                    <div className="flex justify-center mt-8">
+                      <nav className="flex items-center space-x-2">
+                        <button
+                          onClick={() => handlePageChange(pagination.page - 1)}
+                          disabled={!pagination.hasPrev}
+                          className={`px-4 py-2 rounded-md ${
+                            pagination.hasPrev 
+                              ? 'bg-card text-foreground hover:bg-accent' 
+                              : 'bg-muted text-muted-foreground cursor-not-allowed'
+                          }`}
+                        >
+                          Previous
+                        </button>
+                        
+                        <span className="px-4 py-2 text-foreground">
+                          Page {pagination.page} of {pagination.totalPages}
+                        </span>
+                        
+                        <button
+                          onClick={() => handlePageChange(pagination.page + 1)}
+                          disabled={!pagination.hasNext}
+                          className={`px-4 py-2 rounded-md ${
+                            pagination.hasNext 
+                              ? 'bg-card text-foreground hover:bg-accent' 
+                              : 'bg-muted text-muted-foreground cursor-not-allowed'
+                          }`}
+                        >
+                          Next
+                        </button>
+                      </nav>
+                    </div>
+                  )}
+                </>
               ) : (
                 <div className="bg-card rounded-xl shadow-sm p-12 text-center border border-border relative overflow-hidden">
                   {/* Decorative element for the empty state card */}
@@ -418,10 +460,13 @@ const Search = () => {
                       <SearchIcon size={32} />
                     </div>
                     <h3 className="text-xl font-bold text-foreground mb-2">
-                      No internships found
+                      No approved internships available
                     </h3>
-                    <p className="text-muted-foreground max-w-md mx-auto">
-                      Try adjusting your search filters or try a different location.
+                    <p className="text-muted-foreground max-w-md mx-auto mb-4">
+                      There are currently no internships available. Please check back later as new opportunities are added regularly.
+                    </p>
+                    <p className="text-muted-foreground max-w-md mx-auto text-sm">
+                      If you're a company looking to post an internship, <Link to="/post-internship" className="text-primary hover:underline">click here</Link>.
                     </p>
                   </div>
                 </div>

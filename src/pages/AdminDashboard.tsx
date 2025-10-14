@@ -1,9 +1,9 @@
 import { useEffect, useMemo, useState } from 'react';
-import { listInternships, listUsers } from '../api';
+import { usersAPI, internshipsAPI } from '@/lib/new-api-client';
 import { Link } from 'react-router-dom';
 import { UsersIcon, BriefcaseIcon, AlertCircleIcon, CheckCircleIcon, ActivityIcon } from 'lucide-react';
 import { ResponsiveContainer, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, AreaChart, Area, BarChart, Bar, PieChart as RechartsPieChart, Pie, Cell, Legend } from 'recharts';
-import { useToast } from '../components/ToastProvider';
+import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '../contexts/AuthContext';
 import { useRealtimeData } from '../hooks/useRealtimeData';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
@@ -29,7 +29,29 @@ interface UserData {
 }
 
 const AdminDashboard = () => {
-  const { showSuccess, showInfo } = useToast();
+  const { toast } = useToast();
+  
+  const showSuccess = (message: string, title: string = "Success") => {
+    toast({
+      title,
+      description: message,
+    });
+  };
+  
+  const showInfo = (message: string, title: string = "Information") => {
+    toast({
+      title,
+      description: message,
+    });
+  };
+  
+  const showError = (message: string, title: string = "Error") => {
+    toast({
+      title,
+      description: message,
+      variant: "destructive",
+    });
+  };
   const { user } = useAuth();
 
   const [activeTab, setActiveTab] = useState('dashboard');
@@ -53,15 +75,15 @@ const AdminDashboard = () => {
     refresh: refreshInternships
   } = useRealtimeData<PendingInternship[]>(
     async () => {
-      const response = await listInternships();
-      const all = response.data;
-      return all.filter((i: any) => !i.isApproved).map((i: any) => ({
+      const response = await internshipsAPI.getPending();
+      const all = response.data.data?.internships || [];
+      return all.map((i: any) => ({
         id: i.id,
         title: i.title,
-        company: i.company,
+        company: i.company_name || i.company || 'Unknown Company',
         location: i.location || 'Remote',
-        type: 'Full-time',
-        postedDate: i.createdAt,
+        type: i.type || 'Full-time',
+        postedDate: i.created_at || i.postedDate,
         status: 'pending' as const
       }));
     },
@@ -76,15 +98,15 @@ const AdminDashboard = () => {
     refresh: refreshUsers
   } = useRealtimeData<UserData[]>(
     async () => {
-      const response = await listUsers();
-      const usersApi = response.data;
+      const response = await usersAPI.getAll({ page: 1, limit: 100 });
+      const usersApi = response.data.data?.users || [];
       return usersApi.map((u: any) => ({
         id: u.id,
         name: u.name ?? u.email,
         email: u.email,
         role: u.role ?? 'student',
-        joinDate: u.createdAt ?? '',
-        status: 'active' as const
+        joinDate: u.created_at ?? u.joinDate ?? '',
+        status: u.status ?? 'active'
       }));
     },
     [],
@@ -247,6 +269,7 @@ const AdminDashboard = () => {
       showSuccess('Internship Approved', 'The internship has been approved successfully!');
     } catch (error) {
       console.error('Failed to approve internship:', error);
+      showError('Failed to approve internship. Please try again.');
     }
   };
 
@@ -259,6 +282,7 @@ const AdminDashboard = () => {
       showSuccess('Internship Rejected', 'The internship has been rejected.');
     } catch (error) {
       console.error('Failed to reject internship:', error);
+      showError('Failed to reject internship. Please try again.');
     }
   };
 
@@ -281,6 +305,7 @@ const AdminDashboard = () => {
           showSuccess('User Updated', 'User has been updated successfully!');
         } catch (error) {
           console.error('Failed to update user:', error);
+          showError('Failed to update user. Please try again.');
         }
       }
     }
@@ -300,6 +325,7 @@ const AdminDashboard = () => {
         );
       } catch (error) {
         console.error('Failed to toggle user status:', error);
+        showError('Failed to update user status. Please try again.');
       }
     }
   };

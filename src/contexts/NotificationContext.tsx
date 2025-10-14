@@ -1,5 +1,6 @@
 import React, { createContext, ReactNode } from 'react';
 import { useRealtimeNotifications } from '../hooks/useRealtimeData';
+import { toast } from '@/hooks/use-toast';
 
 // Notification interface
 export interface Notification {
@@ -51,14 +52,22 @@ const NotificationProvider: React.FC<NotificationProviderProps> = ({ children })
       read: false
     };
     
-    // In a real implementation, this would add to the notifications array
-    console.log('New notification:', newNotification);
+    // Show toast notification
+    toast({
+      title: newNotification.title,
+      description: newNotification.message,
+      variant: newNotification.priority === 'high' ? 'destructive' : 'default'
+    });
   };
 
-  // Remove a notification
+  // Remove a notification (hide it locally since backend doesn't support deletion)
   const removeNotification = (id: number) => {
-    // In a real implementation, this would remove from the notifications array
-    console.log('Remove notification:', id);
+    // In a real implementation with backend support, this would make an API call
+    // For now, we'll just show a message that the notification is hidden locally
+    toast({
+      title: "Notification Hidden",
+      description: `Notification #${id} has been hidden locally. Note that it may reappear on refresh.`,
+    });
   };
 
   // For now, we'll just pass through the notifications from useRealtimeNotifications

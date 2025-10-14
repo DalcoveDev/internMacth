@@ -1,16 +1,19 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ArrowLeft, User, Mail, Phone, MapPin, GraduationCap, Briefcase, FileText, Link as LinkIcon } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
-import { useToast } from '../components/ToastProvider';
+import { useToast } from '@/hooks/use-toast';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+// Import the real API client
+import { authAPI } from '@/lib/new-api-client';
 
 const StudentProfile = () => {
   const navigate = useNavigate();
   const { user, updateUser } = useAuth();
-  const { showSuccess, showError } = useToast();
+  const { toast } = useToast();
   const [isEditing, setIsEditing] = useState(false);
+  const [loading, setLoading] = useState(false);
   const [profileData, setProfileData] = useState({
     name: user?.name || '',
     email: user?.email || '',
@@ -25,18 +28,100 @@ const StudentProfile = () => {
     resume: null as File | null
   });
 
+  // Load user profile data from backend
+  useEffect(() => {
+    const loadProfileData = async () => {
+      if (!user) return;
+      
+      try {
+        setLoading(true);
+        const response = await authAPI.getProfile();
+        const profile = response.data.data?.user || {};
+        
+        setProfileData(prev => ({
+          ...prev,
+          name: profile.name || '',
+          email: profile.email || '',
+          phone: profile.phone || '',
+          location: profile.location || '',
+          education: profile.education || '',
+          major: profile.major || '',
+          graduationYear: profile.graduation_year || '',
+          skills: profile.skills || '',
+          experience: profile.experience || '',
+          portfolio: profile.portfolio || ''
+        }));
+      } catch (error) {
+        console.error('Failed to load profile data:', error);
+        toast({
+          title: "Error",
+          description: "Failed to load profile data. Please try again.",
+          variant: "destructive",
+        });
+      } finally {
+        setLoading(false);
+      }
+    };
+    
+    loadProfileData();
+  }, [user]);
+
   const handleInputChange = (field: string, value: string) => {
     setProfileData(prev => ({ ...prev, [field]: value }));
   };
 
-  const handleSave = () => {
+  const handleSave = async () => {
     try {
-      // In a real application, this would connect to the backend
+      setLoading(true);
+      
+      // Prepare data for API call
+      const updateData = {
+        name: profileData.name,
+        phone: profileData.phone,
+        location: profileData.location,
+        education: profileData.education,
+        major: profileData.major,
+        graduation_year: profileData.graduationYear,
+        skills: profileData.skills,
+        experience: profileData.experience,
+        portfolio: profileData.portfolio
+      };
+      
+      // Call the real API to update the profile
+      await authAPI.updateProfile(updateData);
+      
+      // Update the local user context
       updateUser({ name: profileData.name });
+      
       setIsEditing(false);
-      showSuccess('Profile Updated', 'Your profile has been updated successfully!');
-    } catch (error) {
-      showError('Update Failed', 'Failed to update profile. Please try again.');
+      toast({
+        title: "Profile Updated",
+        description: "Your profile has been updated successfully!",
+      });
+    } catch (error: any) {
+      console.error('Failed to update profile:', error);
+      let errorMessage = "Failed to update profile. Please try again.";
+      
+      if (error.response?.status === 400) {
+        if (error.response.data?.error?.details) {
+          // Handle validation errors
+          errorMessage = error.response.data.error.details.map((err: any) => err.msg).join(', ');
+        } else if (error.response.data?.error?.message) {
+          errorMessage = error.response.data.error.message;
+        }
+      } else if (error.response?.status === 500) {
+        errorMessage = "Server error. Please try again later.";
+      } else if (error.message) {
+        errorMessage = error.message;
+      }
+      
+      toast({
+        title: "Update Failed",
+        description: errorMessage,
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -44,11 +129,18 @@ const StudentProfile = () => {
     const file = event.target.files?.[0];
     if (file) {
       if (file.size > 5 * 1024 * 1024) { // 5MB limit
-        showError('File Too Large', 'File size must be less than 5MB');
+        toast({
+          title: "File Too Large",
+          description: "File size must be less than 5MB",
+          variant: "destructive",
+        });
         return;
       }
       setProfileData(prev => ({ ...prev, [field]: file }));
-      showSuccess('File Uploaded', `${field === 'resume' ? 'Resume' : 'Document'} uploaded successfully!`);
+      toast({
+        title: "File Uploaded",
+        description: `${field === 'resume' ? 'Resume' : 'Document'} uploaded successfully!`,
+      });
     }
   };
 
@@ -82,6 +174,7 @@ const StudentProfile = () => {
               <Button 
                 onClick={() => setIsEditing(!isEditing)}
                 variant="secondary"
+                disabled={loading}
               >
                 {isEditing ? 'Cancel' : 'Edit Profile'}
               </Button>
@@ -89,6 +182,13 @@ const StudentProfile = () => {
           </div>
           
           <div className="p-6">
+            {/* Loading indicator for initial data load */}
+            {loading && !isEditing && (
+              <div className="flex justify-center my-4">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+              </div>
+            )}
+            
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
               {/* Profile Picture Section */}
               <Card className="md:col-span-1 border border-border">
@@ -384,8 +484,15 @@ const StudentProfile = () => {
             
             {isEditing && (
               <div className="mt-6 flex justify-end">
-                <Button onClick={handleSave} variant="default">
-                  Save Changes
+                <Button onClick={handleSave} variant="default" disabled={loading}>
+                  {loading ? (
+                    <>
+                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                      Saving...
+                    </>
+                  ) : (
+                    'Save Changes'
+                  )}
                 </Button>
               </div>
             )}

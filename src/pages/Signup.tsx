@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
-import { useTheme } from '../contexts/ThemeContext'; // Add this import
+import { useTheme } from '../contexts/ThemeContext';
 import { EyeIcon, EyeOffIcon, UserIcon, BuildingIcon } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -10,9 +10,10 @@ import { Label } from '@/components/ui/label';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Select } from '@/components/ui/select';
 
 const Signup = () => {
-  const { effectiveTheme } = useTheme(); // Get the current theme
+  const { effectiveTheme } = useTheme();
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -39,107 +40,74 @@ const Signup = () => {
 
   const handleSignup = async (e: React.FormEvent) => {
     e.preventDefault();
-    clearError(); // Clear previous errors
-    setLocalError(''); // Clear local errors
+    clearError();
+    setLocalError('');
     setIsLoading(true);
     setProgress(0);
     
-    // Enhanced validation
-    if (!name?.trim() || !email?.trim() || !password) {
-      toast({
-        title: "Missing Information",
-        description: "Please fill in all required fields",
-        variant: "destructive",
-      });
-      setIsLoading(false);
-      return;
-    }
-    
-    if (name.trim().length < 2) {
-      toast({
-        title: "Invalid Name",
-        description: "Name must be at least 2 characters long",
-        variant: "destructive",
-      });
-      setIsLoading(false);
-      return;
-    }
-    
-    if (!email.includes('@') || !email.includes('.')) {
-      toast({
-        title: "Invalid Email",
-        description: "Please enter a valid email address",
-        variant: "destructive",
-      });
-      setIsLoading(false);
-      return;
-    }
-    
-    if (password.length < 8) {
-      toast({
-        title: "Weak Password",
-        description: "Password must be at least 8 characters long",
-        variant: "destructive",
-      });
-      setIsLoading(false);
-      return;
-    }
-    
+    // Password confirmation validation
     if (password !== confirmPassword) {
-      toast({
-        title: "Password Mismatch",
-        description: "Passwords do not match",
-        variant: "destructive",
-      });
+      setLocalError("Passwords don't match");
       setIsLoading(false);
       return;
     }
     
-    // Check password strength
-    const hasNumber = /\d/.test(password);
-    const hasLetter = /[a-zA-Z]/.test(password);
-    if (!hasNumber || !hasLetter) {
-      toast({
-        title: "Weak Password",
-        description: "Password must contain both letters and numbers",
-        variant: "destructive",
-      });
-      setIsLoading(false);
-      return;
-    }
+    // Start progress simulation
+    const progressInterval = setInterval(() => {
+      setProgress(prev => Math.min(prev + 10, 90));
+    }, 100);
     
     try {
-      // Simulate progress for better UX
-      const progressInterval = setInterval(() => {
-        setProgress(prev => {
-          if (prev >= 90) {
-            clearInterval(progressInterval);
-            return prev;
-          }
-          return prev + 10;
+      // Add a small delay to show progress
+      setTimeout(async () => {
+        clearInterval(progressInterval);
+        setProgress(90);
+        
+        await signup({ name: name.trim(), email: email.trim().toLowerCase(), password, role });
+        
+        clearInterval(progressInterval);
+        setProgress(100);
+        
+        toast({
+          title: "Account Created",
+          description: "Your account has been successfully created!",
         });
+        
+        // Navigate based on role after successful signup
+        if (role === 'student') navigate('/student-dashboard');
+        else if (role === 'company') navigate('/company-dashboard');
+        else if (role === 'admin') navigate('/admin-dashboard');
+        else navigate('/');
+        
       }, 300);
       
-      await signup({ name: name.trim(), email: email.trim().toLowerCase(), password, role });
-      
+    } catch (error: any) {
       clearInterval(progressInterval);
-      setProgress(100);
+      setIsLoading(false);
       
-      toast({
-        title: "Account Created",
-        description: "Your account has been successfully created!",
-      });
+      // More detailed error handling
+      let errorMessage = "Failed to create account. Please try again.";
       
-      // Navigate based on role after successful signup
-      if (role === 'student') navigate('/student-dashboard');
-      else if (role === 'company') navigate('/company-dashboard');
-      else if (role === 'admin') navigate('/admin-dashboard');
-      else navigate('/');
+      if (error.response?.status === 400) {
+        if (error.response.data?.error?.details) {
+          // Handle validation errors
+          errorMessage = error.response.data.error.details.map((err: any) => err.msg).join(', ');
+        } else if (error.response.data?.error?.message) {
+          errorMessage = error.response.data.error.message;
+        }
+      } else if (error.response?.status === 409) {
+        errorMessage = "An account with this email already exists.";
+      } else if (error.response?.status === 500) {
+        errorMessage = "Server error. Please try again later.";
+      } else if (error.message) {
+        errorMessage = error.message;
+      }
       
-    } catch (error) {
+      setLocalError(errorMessage);
+      
       toast({
         title: "Signup Failed",
-        description: "Failed to create account. Please try again.",
+        description: errorMessage,
         variant: "destructive",
       });
       console.error('Signup failed:', error);
@@ -251,19 +219,16 @@ const Signup = () => {
 
               <form onSubmit={handleSignup} className="space-y-3">
                 <div className="mb-3">
-                  <Label className="block text-sm font-medium mb-2" htmlFor="role">
-                    Role:
-                  </Label>
-                  <select
-                    id="role"
+                  <Select
+                    label="Role:"
                     value={role}
                     onChange={(e) => setRole(e.target.value)}
-                    className={`w-full p-2 rounded-md focus:outline-none focus:ring-2 ${effectiveTheme === 'dark' ? 'bg-background border border-border text-foreground focus:ring-primary focus:border-primary' : 'border border-gray-300 text-gray-700 focus:ring-emerald-500 focus:border-emerald-500'}`}
-                  >
-                    <option value="student">Student</option>
-                    <option value="company">Company</option>
-                    <option value="admin">Admin</option>
-                  </select>
+                    options={[
+                      { value: 'student', label: 'Student' },
+                      { value: 'company', label: 'Company' },
+                      { value: 'admin', label: 'Admin' }
+                    ]}
+                  />
                 </div>
 
                 <div>

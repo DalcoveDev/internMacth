@@ -2,11 +2,13 @@ import { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { ClipboardListIcon, BriefcaseIcon, UserIcon, ClockIcon, CheckCircleIcon, XCircleIcon, EyeIcon, EditIcon, TrashIcon, TrendingUp, BarChart3, Users, Calendar, Target, Brain } from 'lucide-react';
 import { ResponsiveContainer, XAxis, YAxis, CartesianGrid, Tooltip, BarChart, Bar, AreaChart, Area, PieChart as RechartsPieChart, Pie, Cell } from 'recharts';
-import { useToast } from '../components/ToastProvider';
+import { useToast } from '@/hooks/use-toast';
 import { useConfirm } from '../components/ConfirmDialog';
 import { useAuth } from '../contexts/AuthContext';
+// Import the new API client for real backend integration
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import { internshipsAPI, applicationsAPI } from '@/lib/new-api-client';
 
 interface Internship {
   id: number;
@@ -28,7 +30,9 @@ interface Application {
   studentEmail: string;
   appliedDate: string;
   status: 'pending' | 'approved' | 'rejected';
-  skills: string[]; // Added skills
+  skills: string; // Changed from string[] to string
+  experience?: string;
+  education?: string;
 }
 
 interface DashboardData {
@@ -54,7 +58,30 @@ interface AIInsight {
 
 const CompanyDashboard = () => {
   const navigate = useNavigate();
-  const { showSuccess, showInfo } = useToast();
+  const { toast } = useToast();
+  
+  // Helper functions for showing toast notifications
+  const showSuccess = (message: string, title: string = "Success") => {
+    toast({
+      title,
+      description: message,
+    });
+  };
+  
+  const showInfo = (message: string, title: string = "Information") => {
+    toast({
+      title,
+      description: message,
+    });
+  };
+  
+  const showError = (message: string, title: string = "Error") => {
+    toast({
+      title,
+      description: message,
+      variant: "destructive",
+    });
+  };
   const { confirm } = useConfirm();
   const { user, updateUser } = useAuth();
   const [activeTab, setActiveTab] = useState('internships');
@@ -76,146 +103,88 @@ const CompanyDashboard = () => {
     aiInsights: [] as AIInsight[] // New: AI insights
   });
 
-  // Generate mock dashboard data
+  // Fetch real dashboard data
   useEffect(() => {
-    const generateMockData = () => {
-      // Mock internships data with various career fields
-      const mockInternships: Internship[] = [
-        {
-          id: 1,
-          title: 'Software Development Intern',
-          location: 'San Francisco, CA',
-          type: 'Full-time',
-          duration: '3 months',
-          postedDate: '2023-05-15',
-          status: 'approved',
-          applications: 12,
-          careerField: 'Technology'
-        },
-        {
-          id: 2,
-          title: 'Marketing Intern',
-          location: 'New York, NY',
-          type: 'Part-time',
-          duration: '6 months',
-          postedDate: '2023-05-10',
-          status: 'approved',
-          applications: 8,
-          careerField: 'Marketing'
-        },
-        {
-          id: 3,
-          title: 'Data Science Intern',
-          location: 'Remote',
-          type: 'Full-time',
-          duration: '4 months',
-          postedDate: '2023-05-05',
-          status: 'pending',
-          applications: 5,
-          careerField: 'Data Science'
-        },
-        {
-          id: 4,
-          title: 'Financial Analyst Intern',
-          location: 'Chicago, IL',
-          type: 'Full-time',
-          duration: '3 months',
-          postedDate: '2023-05-20',
-          status: 'approved',
-          applications: 7,
-          careerField: 'Finance'
-        },
-        {
-          id: 5,
-          title: 'Graphic Design Intern',
-          location: 'Los Angeles, CA',
-          type: 'Part-time',
-          duration: '6 months',
-          postedDate: '2023-05-25',
-          status: 'approved',
-          applications: 9,
-          careerField: 'Design'
-        }
-      ];
-
-      // Mock applications data with skills
-      const mockApplications: Application[] = [
-        {
-          id: 1,
-          internshipId: 1,
-          internshipTitle: 'Software Development Intern',
-          studentName: 'John Doe',
-          studentEmail: 'john.doe@example.com',
-          appliedDate: '2023-05-16',
-          status: 'pending',
-          skills: ['JavaScript', 'React', 'Node.js']
-        },
-        {
-          id: 2,
-          internshipId: 1,
-          internshipTitle: 'Software Development Intern',
-          studentName: 'Jane Smith',
-          studentEmail: 'jane.smith@example.com',
-          appliedDate: '2023-05-17',
-          status: 'approved',
-          skills: ['Python', 'Django', 'SQL']
-        },
-        {
-          id: 3,
-          internshipId: 2,
-          internshipTitle: 'Marketing Intern',
-          studentName: 'Robert Johnson',
-          studentEmail: 'robert.j@example.com',
-          appliedDate: '2023-05-11',
-          status: 'rejected',
-          skills: ['SEO', 'Content Writing', 'Social Media']
-        },
-        {
-          id: 4,
-          internshipId: 4,
-          internshipTitle: 'Financial Analyst Intern',
-          studentName: 'Emily Chen',
-          studentEmail: 'emily.chen@example.com',
-          appliedDate: '2023-05-22',
-          status: 'pending',
-          skills: ['Financial Modeling', 'Excel', 'Data Analysis']
-        },
-        {
-          id: 5,
-          internshipId: 5,
-          internshipTitle: 'Graphic Design Intern',
-          studentName: 'Michael Brown',
-          studentEmail: 'michael.b@example.com',
-          appliedDate: '2023-05-26',
-          status: 'approved',
-          skills: ['Adobe Photoshop', 'Illustrator', 'UI/UX Design']
-        }
-      ];
-
-      // Mock dashboard data
-      const mockDashboardData: DashboardData = {
-        stats: {
-          activeInternships: 4,
-          pendingInternships: 1,
-          totalApplications: 22,
-          pendingApplications: 9,
-          careerFields: {
-            'Technology': 2,
-            'Marketing': 1,
-            'Data Science': 1,
-            'Finance': 1,
-            'Design': 1
-          }
-        },
-        internships: mockInternships,
-        recentApplications: mockApplications
-      };
-
-      setDashboardData(mockDashboardData);
+    const fetchDashboardData = async () => {
+      if (!user) return;
       
-      // Generate analytics based on mock data
-      generateCompanyAnalytics(mockApplications, mockInternships);
-      setLoading(false);
+      try {
+        setLoading(true);
+        
+        // Fetch real data from backend
+        const [internshipsResponse, applicationsResponse] = await Promise.all([
+          internshipsAPI.getAll({ page: 1, limit: 100 }),
+          applicationsAPI.getCompanyApplications({ page: 1, limit: 100 })
+        ]);
+        
+        const internships = internshipsResponse.data.data?.internships || [];
+        const applications = applicationsResponse.data.data?.applications || [];
+
+        // Transform internships data
+        const transformedInternships: Internship[] = internships.map((internship: any) => ({
+          id: internship.id,
+          title: internship.title,
+          location: internship.location,
+          type: internship.type,
+          duration: internship.duration,
+          postedDate: internship.created_at,
+          status: internship.is_approved ? 'approved' : (internship.is_active ? 'pending' : 'rejected'),
+          applications: 0, // We'll need to get this from a separate endpoint or calculate it
+          careerField: internship.career_field || 'General'
+        }));
+
+        // Transform applications data
+        const transformedApplications: Application[] = applications.map((app: any) => ({
+          id: app.id,
+          internshipId: app.internship_id,
+          studentName: app.student?.name || 'Unknown Student',
+          studentEmail: app.student?.email || 'Unknown Email',
+          appliedDate: app.applied_at,
+          status: app.status,
+          internshipTitle: app.internship?.title || 'Unknown Internship',
+          skills: app.skills || '',
+          experience: app.experience || '',
+          education: app.education || ''
+        }));
+
+        // Calculate stats
+        const careerFieldCount = transformedInternships.reduce((acc: Record<string, number>, internship) => {
+          acc[internship.careerField] = (acc[internship.careerField] || 0) + 1;
+          return acc;
+        }, {} as Record<string, number>);
+        
+        const stats = {
+          activeInternships: transformedInternships.filter(i => i.status === 'approved').length,
+          pendingInternships: transformedInternships.filter(i => i.status === 'pending').length,
+          totalApplications: transformedApplications.length,
+          pendingApplications: transformedApplications.filter(app => app.status === 'pending').length,
+          careerFields: careerFieldCount
+        };
+
+        const dashboardData: DashboardData = {
+          stats,
+          internships: transformedInternships,
+          recentApplications: transformedApplications
+        };
+
+        setDashboardData(dashboardData);
+        generateCompanyAnalytics(transformedApplications, transformedInternships);
+      } catch (error: any) {
+        console.error('Failed to fetch dashboard data:', error);
+        let errorMessage = 'Failed to load dashboard data.';
+        
+        if (error.response?.status === 401) {
+          errorMessage = 'You must be logged in to view this dashboard.';
+        } else if (error.response?.status === 500) {
+          errorMessage = 'Server error. Please try again later.';
+        } else if (error.message) {
+          errorMessage = error.message;
+        }
+        
+        showError(errorMessage);
+      } finally {
+        setLoading(false);
+      }
     };
 
     if (user) {
@@ -226,8 +195,7 @@ const CompanyDashboard = () => {
         industry: 'Technology',
         description: ''
       });
-      // Generate mock data instead of fetching from backend
-      generateMockData();
+      fetchDashboardData();
     }
   }, [user]);
 
@@ -269,7 +237,7 @@ const CompanyDashboard = () => {
     ];
 
     // Career field distribution
-    const careerFieldCount = internshipList.reduce((acc, internship) => {
+    const careerFieldCount = internshipList.reduce((acc: Record<string, number>, internship: Internship) => {
       acc[internship.careerField] = (acc[internship.careerField] || 0) + 1;
       return acc;
     }, {} as Record<string, number>);
@@ -330,18 +298,88 @@ const CompanyDashboard = () => {
     return colors[field] || '#6B7280'; // Default gray
   };
 
-  const handleApproveApplication = (id: number) => {
-    // In a real application, this would connect to the backend
-    // to approve the application with the given id
-    console.log(`Approving application with ID: ${id}`);
-    showSuccess('Application Approved', `Application #${id} has been approved successfully!`);
+  const handleApproveApplication = async (id: number) => {
+    try {
+      await applicationsAPI.updateStatus(id, 'approved');
+      // Refresh the dashboard data to show updated status
+      const applicationsResponse = await applicationsAPI.getCompanyApplications({ page: 1, limit: 100 });
+      const applications = applicationsResponse.data.data?.applications || [];
+      
+      const transformedApplications: Application[] = applications.map((app: any) => ({
+        id: app.id,
+        internshipId: app.internship_id,
+        studentName: app.student?.name || 'Unknown Student',
+        studentEmail: app.student?.email || 'Unknown Email',
+        appliedDate: app.applied_at,
+        status: app.status,
+        internshipTitle: app.internship?.title || 'Unknown Internship',
+        skills: app.skills || '',
+        experience: app.experience || '',
+        education: app.education || ''
+      }));
+      
+      setDashboardData(prev => prev ? {
+        ...prev,
+        recentApplications: transformedApplications
+      } : null);
+      
+      showSuccess('Application Approved', `Application #${id} has been approved successfully!`);
+    } catch (error: any) {
+      console.error('Failed to approve application:', error);
+      let errorMessage = 'Failed to approve application. Please try again later.';
+      
+      if (error.response?.status === 403) {
+        errorMessage = 'You are not authorized to approve this application.';
+      } else if (error.response?.status === 404) {
+        errorMessage = 'Application not found.';
+      } else if (error.message) {
+        errorMessage = error.message;
+      }
+      
+      showError('Approval Failed', errorMessage);
+    }
   };
 
-  const handleRejectApplication = (id: number) => {
-    // In a real application, this would connect to the backend
-    // to reject the application with the given id
-    console.log(`Rejecting application with ID: ${id}`);
-    showInfo('Application Rejected', `Application #${id} has been rejected.`);
+  const handleRejectApplication = async (id: number) => {
+    try {
+      await applicationsAPI.updateStatus(id, 'rejected');
+      // Refresh the dashboard data to show updated status
+      const applicationsResponse = await applicationsAPI.getCompanyApplications({ page: 1, limit: 100 });
+      const applications = applicationsResponse.data.data?.applications || [];
+      
+      const transformedApplications: Application[] = applications.map((app: any) => ({
+        id: app.id,
+        internshipId: app.internship_id,
+        studentName: app.student?.name || 'Unknown Student',
+        studentEmail: app.student?.email || 'Unknown Email',
+        appliedDate: app.applied_at,
+        status: app.status,
+        internshipTitle: app.internship?.title || 'Unknown Internship',
+        skills: app.skills || '',
+        experience: app.experience || '',
+        education: app.education || ''
+      }));
+      
+      setDashboardData(prev => prev ? {
+        ...prev,
+        recentApplications: transformedApplications
+      } : null);
+      
+      showInfo('Application Rejected', `Application #${id} has been rejected.`);
+    } catch (error: any) {
+      console.error('Failed to reject application:', error);
+      let errorMessage = 'Failed to reject application. Please try again later.';
+      
+      if (error.response?.status === 403) {
+        errorMessage = 'You are not authorized to reject this application.';
+      } else if (error.response?.status === 404) {
+        errorMessage = 'Application not found.';
+      } else if (error.message) {
+        errorMessage = error.message;
+      }
+      
+      showError('Rejection Failed', errorMessage);
+    }
   };
 
   const handleDeleteInternship = async (id: number) => {
@@ -1120,13 +1158,13 @@ const CompanyDashboard = () => {
                         value={profileData.industry}
                         onChange={(e) => handleInputChange('industry', e.target.value)}
                       >
-                        <option value="Technology">Technology</option>
-                        <option value="Finance">Finance</option>
-                        <option value="Healthcare">Healthcare</option>
-                        <option value="Education">Education</option>
-                        <option value="Manufacturing">Manufacturing</option>
-                        <option value="Retail">Retail</option>
-                        <option value="Other">Other</option>
+                        <option value="Technology" className="bg-background text-foreground">Technology</option>
+                        <option value="Finance" className="bg-background text-foreground">Finance</option>
+                        <option value="Healthcare" className="bg-background text-foreground">Healthcare</option>
+                        <option value="Education" className="bg-background text-foreground">Education</option>
+                        <option value="Manufacturing" className="bg-background text-foreground">Manufacturing</option>
+                        <option value="Retail" className="bg-background text-foreground">Retail</option>
+                        <option value="Other" className="bg-background text-foreground">Other</option>
                       </select>
                     </div>
                     <div className="md:col-span-2">

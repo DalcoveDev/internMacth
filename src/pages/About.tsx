@@ -1,62 +1,107 @@
+import { useState, useEffect } from 'react';
 import { HeartIcon, ShieldIcon, UsersIcon, AwardIcon } from 'lucide-react';
+import { aboutAPI } from '../lib/new-api-client';
+import { toast } from '@/hooks/use-toast';
 
 const About = () => {
-  // Statistics data for better organization
-  const stats = [
-    { value: '10,000+', label: 'Students Placed' },
-    { value: '500+', label: 'Partner Companies' },
-    { value: '95%', label: 'Success Rate' },
-    { value: '50+', label: 'Industries' },
-  ];
+  const [content, setContent] = useState({
+    stats: [
+      { value: '10,000+', label: 'Students Placed' },
+      { value: '500+', label: 'Partner Companies' },
+      { value: '95%', label: 'Success Rate' },
+      { value: '50+', label: 'Industries' },
+    ],
+    values: [
+      { 
+        icon: 'HeartIcon', 
+        title: 'Student-Focused', 
+        description: 'Every feature is designed with students\' success in mind' 
+      },
+      { 
+        icon: 'ShieldIcon', 
+        title: 'Trusted Platform', 
+        description: 'Verified companies and secure application process' 
+      },
+      { 
+        icon: 'UsersIcon', 
+        title: 'Community', 
+        description: 'Join a network of ambitious students and mentors' 
+      },
+      { 
+        icon: 'AwardIcon', 
+        title: 'Excellence', 
+        description: 'Award-winning platform recognized by industry leaders' 
+      },
+    ],
+    coreValues: [
+      {
+        title: 'Purpose-Driven',
+        description: 'We connect people with opportunities that align with their passions and career goals, creating meaningful professional relationships that drive mutual success.',
+        iconPath: 'M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z',
+        iconClass: 'text-primary-foreground',
+        bgClass: 'bg-primary'
+      },
+      {
+        title: 'Inclusive',
+        description: 'We\'re committed to creating opportunities for students from all backgrounds, ensuring diversity and equal access to career development for everyone.',
+        iconPath: 'M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z',
+        iconClass: 'text-secondary-foreground',
+        bgClass: 'bg-secondary'
+      },
+      {
+        title: 'Innovation',
+        description: 'We continuously improve our platform using cutting-edge technology to make the internship search and hiring process more efficient and effective.',
+        iconPath: 'M13 10V3L4 14h7v7l9-11h-7z',
+        iconClass: 'text-accent-foreground',
+        bgClass: 'bg-accent'
+      }
+    ],
+    story: ''
+  });
+  
+  const [loading, setLoading] = useState(true);
 
-  // Values data for better organization
-  const values = [
-    { 
-      icon: HeartIcon, 
-      title: 'Student-Focused', 
-      description: 'Every feature is designed with students\' success in mind' 
-    },
-    { 
-      icon: ShieldIcon, 
-      title: 'Trusted Platform', 
-      description: 'Verified companies and secure application process' 
-    },
-    { 
-      icon: UsersIcon, 
-      title: 'Community', 
-      description: 'Join a network of ambitious students and mentors' 
-    },
-    { 
-      icon: AwardIcon, 
-      title: 'Excellence', 
-      description: 'Award-winning platform recognized by industry leaders' 
-    },
-  ];
+  useEffect(() => {
+    const fetchContent = async () => {
+      try {
+        const response = await aboutAPI.getContent();
+        setContent(response.data.data);
+      } catch (error: any) {
+        console.error('Failed to fetch about content:', error);
+        toast({
+          title: "Error",
+          description: "Failed to load about content. Using default content.",
+          variant: "destructive",
+        });
+      } finally {
+        setLoading(false);
+      }
+    };
 
-  // Core values data
-  const coreValues = [
-    {
-      title: 'Purpose-Driven',
-      description: 'We connect people with opportunities that align with their passions and career goals, creating meaningful professional relationships that drive mutual success.',
-      iconPath: 'M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z',
-      iconClass: 'text-primary-foreground',
-      bgClass: 'bg-primary'
-    },
-    {
-      title: 'Inclusive',
-      description: 'We\'re committed to creating opportunities for students from all backgrounds, ensuring diversity and equal access to career development for everyone.',
-      iconPath: 'M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z',
-      iconClass: 'text-secondary-foreground',
-      bgClass: 'bg-secondary'
-    },
-    {
-      title: 'Innovation',
-      description: 'We continuously improve our platform using cutting-edge technology to make the internship search and hiring process more efficient and effective.',
-      iconPath: 'M13 10V3L4 14h7v7l9-11h-7z',
-      iconClass: 'text-accent-foreground',
-      bgClass: 'bg-accent'
+    fetchContent();
+  }, []);
+
+  // Map icon names to actual components
+  const getIconComponent = (iconName: string) => {
+    switch (iconName) {
+      case 'HeartIcon': return HeartIcon;
+      case 'ShieldIcon': return ShieldIcon;
+      case 'UsersIcon': return UsersIcon;
+      case 'AwardIcon': return AwardIcon;
+      default: return HeartIcon;
     }
-  ];
+  };
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-background text-foreground flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
+          <p className="text-muted-foreground">Loading about content...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-background text-foreground">
@@ -110,7 +155,7 @@ const About = () => {
                 creating partnerships that drive innovation and growth for both parties.
               </p>
               <div className="grid grid-cols-2 gap-6">
-                {stats.map((stat, index) => (
+                {content.stats.map((stat, index) => (
                   <div 
                     key={index} 
                     className="text-center bg-muted rounded-lg p-4 transition-colors duration-300 hover:bg-accent"
@@ -142,8 +187,8 @@ const About = () => {
           </div>
           
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-            {values.map((value, index) => {
-              const IconComponent = value.icon;
+            {content.values.map((value, index) => {
+              const IconComponent = getIconComponent(value.icon);
               return (
                 <div 
                   key={index} 
@@ -169,23 +214,29 @@ const About = () => {
           <div className="max-w-3xl mx-auto text-center">
             <h2 className="text-3xl font-bold text-foreground mb-8">Our Story</h2>
             <div className="text-lg text-muted-foreground space-y-6">
-              <p>
-                InternMatch was founded in 2020 by a team of former students and industry professionals 
-                who experienced firsthand the challenges of finding meaningful internship opportunities. 
-                We noticed a disconnect between talented students seeking real-world experience and 
-                companies looking for fresh perspectives.
-              </p>
-              <p>
-                What started as a simple idea to connect students with internships has grown into a 
-                comprehensive platform that serves thousands of users across multiple countries. 
-                Our success is measured not just in numbers, but in the careers we've helped launch 
-                and the innovations we've enabled.
-              </p>
-              <p>
-                Today, we continue to evolve our platform based on feedback from our community, 
-                always with the goal of making internship discovery and hiring more efficient, 
-                transparent, and accessible for everyone.
-              </p>
+              {content.story ? (
+                <p>{content.story}</p>
+              ) : (
+                <>
+                  <p>
+                    InternMatch was founded in 2020 by a team of former students and industry professionals 
+                    who experienced firsthand the challenges of finding meaningful internship opportunities. 
+                    We noticed a disconnect between talented students seeking real-world experience and 
+                    companies looking for fresh perspectives.
+                  </p>
+                  <p>
+                    What started as a simple idea to connect students with internships has grown into a 
+                    comprehensive platform that serves thousands of users across multiple countries. 
+                    Our success is measured not just in numbers, but in the careers we've helped launch 
+                    and the innovations we've enabled.
+                  </p>
+                  <p>
+                    Today, we continue to evolve our platform based on feedback from our community, 
+                    always with the goal of making internship discovery and hiring more efficient, 
+                    transparent, and accessible for everyone.
+                  </p>
+                </>
+              )}
             </div>
           </div>
         </div>
@@ -208,7 +259,7 @@ const About = () => {
           </div>
           
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-            {coreValues.map((value, index) => (
+            {content.coreValues.map((value, index) => (
               <div 
                 key={index} 
                 className="bg-card rounded-xl shadow-sm hover:shadow-md transition-all duration-300 p-8 text-center border border-border hover:border-primary"

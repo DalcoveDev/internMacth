@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useAuth } from '../contexts/AuthContext';
+import { notificationsAPI } from '@/lib/new-api-client';
 
 // Types for different data types we sync
 export interface SyncOptions {
@@ -29,7 +30,7 @@ export const useRealtimeData = <T>(
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
   
   const retryCountRef = useRef(0);
-  const intervalRef = useRef<NodeJS.Timeout | null>(null);
+  const intervalRef = useRef<number | null>(null);
 
   // Fetch data function with retry logic
   const fetchData = useCallback(async (isRetry = false) => {
@@ -72,7 +73,7 @@ export const useRealtimeData = <T>(
       fetchData();
       
       if (interval > 0) {
-        intervalRef.current = setInterval(() => {
+        intervalRef.current = window.setInterval(() => {
           fetchData(true); // Silent refresh
         }, interval);
       }
@@ -114,7 +115,7 @@ export const useFormSync = <T>(
   const [isSaving, setIsSaving] = useState(false);
   const [lastSaved, setLastSaved] = useState<Date | null>(null);
   
-  const timeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const timeoutRef = useRef<number | null>(null);
 
   // Load initial data from localStorage
   useEffect(() => {
@@ -135,7 +136,7 @@ export const useFormSync = <T>(
       clearTimeout(timeoutRef.current);
     }
 
-    timeoutRef.current = setTimeout(() => {
+    timeoutRef.current = window.setTimeout(() => {
       setIsSaving(true);
       try {
         localStorage.setItem(key, JSON.stringify(data));
@@ -185,51 +186,81 @@ export const useRealtimeNotifications = () => {
   const [notifications, setNotifications] = useState<any[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
 
-  // Simulate real-time notifications
+  // Fetch real notifications
+  const fetchNotifications = async () => {
+    if (!user) return;
+    
+    try {
+      const response = await notificationsAPI.getAll();
+      // Fix: Access the correct data structure from the API response
+      const notificationsData = response.data.data?.notifications || [];
+      const fetchedNotifications = notificationsData.map((notification: any) => ({
+        id: notification.id,
+        type: notification.type,
+        title: notification.title,
+        message: notification.message,
+        timestamp: new Date(notification.created_at),
+        read: notification.is_read,
+        priority: notification.priority,
+        actionUrl: notification.action_url,
+        metadata: notification.metadata
+      }));
+      
+      setNotifications(fetchedNotifications);
+      // Fix: Use the unreadCount from the API response
+      const unreadCount = response.data.data?.unreadCount || 0;
+      setUnreadCount(unreadCount);
+    } catch (error) {
+      console.error('Failed to fetch notifications:', error);
+    }
+  };
+
   useEffect(() => {
     if (!user) return;
 
-    const interval = setInterval(() => {
-      // Simulate receiving notifications
-      const shouldReceive = Math.random() > 0.8; // 20% chance
-      
-      if (shouldReceive) {
-        const newNotification = {
-          id: Date.now(),
-          type: ['application_update', 'new_internship', 'message'][Math.floor(Math.random() * 3)],
-          title: 'New Update',
-          message: 'You have a new update available',
-          timestamp: new Date(),
-          read: false
-        };
+    // Fetch notifications immediately
+    fetchNotifications();
 
-        setNotifications(prev => [newNotification, ...prev.slice(0, 9)]);
-        setUnreadCount(prev => prev + 1);
-      }
-    }, 45000); // Check every 45 seconds
+    // Set up polling for new notifications
+    const interval = window.setInterval(fetchNotifications, 30000); // Check every 30 seconds
 
     return () => clearInterval(interval);
   }, [user]);
 
-  const markAsRead = useCallback((id: number) => {
-    setNotifications(prev => 
-      prev.map(notif => 
-        notif.id === id ? { ...notif, read: true } : notif
-      )
-    );
-    setUnreadCount(prev => Math.max(0, prev - 1));
+  const markAsRead = useCallback(async (id: number) => {
+    try {
+      await notificationsAPI.markAsRead(id);
+      setNotifications(prev => 
+        prev.map(notif => 
+          notif.id === id ? { ...notif, read: true } : notif
+        )
+      );
+      setUnreadCount(prev => Math.max(0, prev - 1));
+    } catch (error) {
+      console.error('Failed to mark notification as read:', error);
+    }
   }, []);
 
-  const markAllAsRead = useCallback(() => {
-    setNotifications(prev => 
-      prev.map(notif => ({ ...notif, read: true }))
-    );
-    setUnreadCount(0);
+  const markAllAsRead = useCallback(async () => {
+    try {
+      await notificationsAPI.markAllAsRead();
+      setNotifications(prev => 
+        prev.map(notif => ({ ...notif, read: true }))
+      );
+      setUnreadCount(0);
+    } catch (error) {
+      console.error('Failed to mark all notifications as read:', error);
+    }
   }, []);
 
-  const clearNotifications = useCallback(() => {
-    setNotifications([]);
-    setUnreadCount(0);
+  const clearNotifications = useCallback(async () => {
+    try {
+      await notificationsAPI.clearAll();
+      setNotifications([]);
+      setUnreadCount(0);
+    } catch (error) {
+      console.error('Failed to clear notifications:', error);
+    }
   }, []);
 
   return {
@@ -248,7 +279,7 @@ export const useApplicationState = () => {
 
   // Load state from localStorage on user change
   useEffect(() => {
-    if (user) {
+    if (user && user.id) {
       try {
         const stored = localStorage.getItem(`app_state_${user.id}`);
         if (stored) {
@@ -262,7 +293,7 @@ export const useApplicationState = () => {
 
   // Save state to localStorage
   useEffect(() => {
-    if (user && Object.keys(globalState).length > 0) {
+    if (user && user.id && Object.keys(globalState).length > 0) {
       try {
         localStorage.setItem(`app_state_${user.id}`, JSON.stringify(globalState));
       } catch (error) {

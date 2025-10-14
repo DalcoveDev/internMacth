@@ -3,16 +3,17 @@ import { Link, useNavigate } from 'react-router-dom';
 import { EyeIcon, EyeOffIcon } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
-import { useTheme } from '../contexts/ThemeContext'; // Add this import
+import { useTheme } from '../contexts/ThemeContext';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Select } from '@/components/ui/select';
 
 const Login = () => {
-  const { effectiveTheme } = useTheme(); // Get the current theme
+  const { effectiveTheme } = useTheme();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [role, setRole] = useState('student');
@@ -84,13 +85,27 @@ const Login = () => {
       else if (role === 'admin') navigate('/admin-dashboard');
       else navigate('/');
       
-    } catch (error) {
+    } catch (error: any) {
+      console.error('Login failed:', error);
+      
+      // More detailed error handling
+      let errorMessage = "Login failed. Please try again.";
+      
+      if (error.response?.status === 401) {
+        errorMessage = "Invalid email or password. Please check your credentials.";
+      } else if (error.response?.status === 400) {
+        errorMessage = error.response.data?.error?.message || "Bad request. Please check your input.";
+      } else if (error.response?.status === 500) {
+        errorMessage = "Server error. Please try again later.";
+      } else if (error.message) {
+        errorMessage = error.message;
+      }
+      
       toast({
         title: "Login Failed",
-        description: "Invalid credentials. Please try again.",
+        description: errorMessage,
         variant: "destructive",
       });
-      console.error('Login failed:', error);
     } finally {
       setIsLoading(false);
     }
@@ -136,19 +151,16 @@ const Login = () => {
 
               <form onSubmit={handleLogin} className="space-y-4">
                 <div className="mb-4">
-                  <Label className="block text-sm font-medium mb-2" htmlFor="role">
-                    Role:
-                  </Label>
-                  <select
-                    id="role"
+                  <Select
+                    label="Role:"
                     value={role}
                     onChange={(e) => setRole(e.target.value)}
-                    className={`w-full p-2 rounded-md focus:outline-none focus:ring-2 ${effectiveTheme === 'dark' ? 'bg-background border border-border text-foreground focus:ring-primary focus:border-primary' : 'border border-gray-300 text-gray-700 focus:ring-emerald-500 focus:border-emerald-500'}`}
-                  >
-                    <option value="student">Student</option>
-                    <option value="company">Company</option>
-                    <option value="admin">Admin</option>
-                  </select>
+                    options={[
+                      { value: 'student', label: 'Student' },
+                      { value: 'company', label: 'Company' },
+                      { value: 'admin', label: 'Admin' }
+                    ]}
+                  />
                 </div>
 
                 <div>

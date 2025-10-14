@@ -1,11 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { CheckCircleIcon, SaveIcon } from 'lucide-react';
-import { useToast } from '../components/ToastProvider';
+import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '../contexts/AuthContext';
-import { postInternship } from '../api';
+import { internshipsAPI } from '@/lib/new-api-client';
+// Backend integration removed - using mock data
 
 const PostInternship = () => {
-  const { showError, showSuccess, showInfo } = useToast();
+  const { toast } = useToast();
   const { user } = useAuth();
   const [formData, setFormData] = useState({
     companyName: '',
@@ -17,12 +18,44 @@ const PostInternship = () => {
     duration: '3 months',
     description: '',
     requirements: '',
+    responsibilities: '',
+    benefits: '',
     applicationDeadline: '',
-    applicationLink: ''
+    applicationLink: '',
+    startDate: '',
+    endDate: '',
+    salaryMin: '',
+    salaryMax: '',
+    salaryType: 'hourly',
+    skills: '',
+    experienceLevel: 'entry'
   });
   const [isSubmitted, setIsSubmitted] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [autoSaveStatus, setAutoSaveStatus] = useState<'saved' | 'saving' | 'error' | ''>('');
+
+  // Helper functions for showing toast notifications
+  const showError = (title: string, description: string) => {
+    toast({
+      title,
+      description,
+      variant: "destructive",
+    });
+  };
+
+  const showSuccess = (title: string, description: string) => {
+    toast({
+      title,
+      description,
+    });
+  };
+
+  const showInfo = (title: string, description: string) => {
+    toast({
+      title,
+      description,
+    });
+  };
 
   // Auto-save draft functionality
   useEffect(() => {
@@ -32,7 +65,7 @@ const PostInternship = () => {
       setFormData(JSON.parse(savedDraft));
       showInfo('Draft Loaded', 'Your previous draft has been loaded');
     }
-  }, [showInfo]);
+  }, []);
 
   // Auto-save form data to localStorage
   useEffect(() => {
@@ -58,63 +91,37 @@ const PostInternship = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
-    // Enhanced validation
-    if (!formData.jobTitle.trim()) {
-      showError('Missing Information', 'Job title is required');
-      return;
-    }
-    
-    if (!formData.companyName.trim()) {
-      showError('Missing Information', 'Company name is required');
-      return;
-    }
-    
-    if (!formData.contactEmail.trim()) {
-      showError('Missing Information', 'Contact email is required');
-      return;
-    }
-    
-    if (!formData.description.trim()) {
-      showError('Missing Information', 'Job description is required');
-      return;
-    }
-    
-    if (!formData.requirements.trim()) {
-      showError('Missing Information', 'Requirements are required');
-      return;
-    }
-    
-    // Check if user is authenticated
     if (!user) {
-      showError('Authentication Required', 'Please log in to post an internship.');
+      showError('Authentication Required', 'You must be logged in to post an internship.');
       return;
     }
     
     setIsSubmitting(true);
     
     try {
-      // Prepare data for API call
+      // Prepare the data to match backend requirements
       const internshipData = {
         title: formData.jobTitle,
-        company: formData.companyName,
-        companyWebsite: formData.companyWebsite,
+        description: formData.description,
+        requirements: formData.requirements,
+        responsibilities: formData.responsibilities,
+        benefits: formData.benefits,
         location: formData.location,
-        type: formData.type,
+        type: formData.type.toLowerCase(), // Backend expects lowercase
         duration: formData.duration,
         deadline: formData.applicationDeadline,
-        applicationLink: formData.applicationLink,
-        description: formData.description,
-        skills: formData.requirements,
-        contactEmail: formData.contactEmail,
-        postedById: user.id,
-        postedBy: {
-          email: formData.contactEmail
-        }
+        start_date: formData.startDate || null,
+        end_date: formData.endDate || null,
+        salary_min: formData.salaryMin ? parseFloat(formData.salaryMin) : null,
+        salary_max: formData.salaryMax ? parseFloat(formData.salaryMax) : null,
+        salary_type: formData.salaryType || null,
+        skills_required: formData.skills || null,
+        experience_level: formData.experienceLevel || 'entry',
+        application_link: formData.applicationLink || null
       };
       
       // Call the actual API to post the internship
-      const response = await postInternship(internshipData);
+      const response = await internshipsAPI.create(internshipData);
       console.log('Internship posted successfully:', response);
       
       // Clear the draft from localStorage on successful submission
@@ -125,7 +132,32 @@ const PostInternship = () => {
       
     } catch (err: any) {
       console.error('Failed to post internship:', err);
-      showError('Posting Failed', 'Failed to post internship. Please try again.');
+      
+      // More detailed error handling
+      let errorMessage = 'Failed to post internship. Please try again.';
+      
+      if (err.response?.status === 400) {
+        if (err.response.data?.error?.details) {
+          // Validation errors
+          errorMessage = err.response.data.error.details.map((validationError: any) => 
+            `${validationError.param}: ${validationError.msg}`
+          ).join(', ');
+        } else if (err.response.data?.error?.message) {
+          errorMessage = err.response.data.error.message;
+        }
+      } else if (err.response?.status === 401) {
+        errorMessage = 'You must be logged in to post an internship.';
+      } else if (err.response?.status === 403) {
+        errorMessage = 'You do not have permission to post internships.';
+      } else if (err.response?.status === 500) {
+        errorMessage = 'Server error. Please try again later.';
+      } else if (err.response?.data?.error?.message) {
+        errorMessage = err.response.data.error.message;
+      } else if (err.message) {
+        errorMessage = err.message;
+      }
+      
+      showError('Posting Failed', errorMessage);
     } finally {
       setIsSubmitting(false);
     }
@@ -291,10 +323,10 @@ const PostInternship = () => {
                   value={formData.type} 
                   onChange={handleChange}
                 >
-                  <option value="Full-time">Full-time</option>
-                  <option value="Part-time">Part-time</option>
-                  <option value="Remote">Remote</option>
-                  <option value="Hybrid">Hybrid</option>
+                  <option value="Full-time" className="bg-background text-foreground">Full-time</option>
+                  <option value="Part-time" className="bg-background text-foreground">Part-time</option>
+                  <option value="Remote" className="bg-background text-foreground">Remote</option>
+                  <option value="Hybrid" className="bg-background text-foreground">Hybrid</option>
                 </select>
               </div>
               <div>
@@ -309,14 +341,14 @@ const PostInternship = () => {
                   value={formData.duration} 
                   onChange={handleChange}
                 >
-                  <option value="1 month">1 month</option>
-                  <option value="2 months">2 months</option>
-                  <option value="3 months">3 months</option>
-                  <option value="4 months">4 months</option>
-                  <option value="6 months">6 months</option>
-                  <option value="Summer">Summer</option>
-                  <option value="Fall">Fall</option>
-                  <option value="Spring">Spring</option>
+                  <option value="1 month" className="bg-background text-foreground">1 month</option>
+                  <option value="2 months" className="bg-background text-foreground">2 months</option>
+                  <option value="3 months" className="bg-background text-foreground">3 months</option>
+                  <option value="4 months" className="bg-background text-foreground">4 months</option>
+                  <option value="6 months" className="bg-background text-foreground">6 months</option>
+                  <option value="Summer" className="bg-background text-foreground">Summer</option>
+                  <option value="Fall" className="bg-background text-foreground">Fall</option>
+                  <option value="Spring" className="bg-background text-foreground">Spring</option>
                 </select>
               </div>
               <div>
@@ -369,6 +401,34 @@ const PostInternship = () => {
                 placeholder="Describe the internship position, responsibilities, and what students will learn..."
               ></textarea>
             </div>
+            <div className="mb-4">
+              <label htmlFor="responsibilities" className="block text-sm font-medium text-foreground mb-1">
+                Responsibilities
+              </label>
+              <textarea 
+                id="responsibilities" 
+                name="responsibilities" 
+                rows={4} 
+                className="w-full px-4 py-2 border border-input rounded-md focus:ring-primary focus:border-primary bg-background text-foreground" 
+                value={formData.responsibilities} 
+                onChange={handleChange} 
+                placeholder="List the key responsibilities of the intern..."
+              ></textarea>
+            </div>
+            <div className="mb-4">
+              <label htmlFor="benefits" className="block text-sm font-medium text-foreground mb-1">
+                Benefits
+              </label>
+              <textarea 
+                id="benefits" 
+                name="benefits" 
+                rows={4} 
+                className="w-full px-4 py-2 border border-input rounded-md focus:ring-primary focus:border-primary bg-background text-foreground" 
+                value={formData.benefits} 
+                onChange={handleChange} 
+                placeholder="List the benefits and perks of the internship..."
+              ></textarea>
+            </div>
             <div>
               <label htmlFor="requirements" className="block text-sm font-medium text-foreground mb-1">
                 Requirements *
@@ -383,6 +443,116 @@ const PostInternship = () => {
                 onChange={handleChange} 
                 placeholder="List the skills, qualifications, and experience required for this position..."
               ></textarea>
+            </div>
+          </div>
+
+          {/* Additional Details */}
+          <div className="mb-8">
+            <h2 className="text-xl font-semibold text-foreground mb-4">
+              Additional Details
+            </h2>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div>
+                <label htmlFor="startDate" className="block text-sm font-medium text-foreground mb-1">
+                  Start Date
+                </label>
+                <input 
+                  type="date" 
+                  id="startDate" 
+                  name="startDate" 
+                  className="w-full px-4 py-2 border border-input rounded-md focus:ring-primary focus:border-primary bg-background text-foreground" 
+                  value={formData.startDate} 
+                  onChange={handleChange} 
+                />
+              </div>
+              <div>
+                <label htmlFor="endDate" className="block text-sm font-medium text-foreground mb-1">
+                  End Date
+                </label>
+                <input 
+                  type="date" 
+                  id="endDate" 
+                  name="endDate" 
+                  className="w-full px-4 py-2 border border-input rounded-md focus:ring-primary focus:border-primary bg-background text-foreground" 
+                  value={formData.endDate} 
+                  onChange={handleChange} 
+                />
+              </div>
+              <div>
+                <label htmlFor="salaryMin" className="block text-sm font-medium text-foreground mb-1">
+                  Minimum Salary
+                </label>
+                <input 
+                  type="number" 
+                  id="salaryMin" 
+                  name="salaryMin" 
+                  className="w-full px-4 py-2 border border-input rounded-md focus:ring-primary focus:border-primary bg-background text-foreground" 
+                  value={formData.salaryMin} 
+                  onChange={handleChange} 
+                  placeholder="0"
+                />
+              </div>
+              <div>
+                <label htmlFor="salaryMax" className="block text-sm font-medium text-foreground mb-1">
+                  Maximum Salary
+                </label>
+                <input 
+                  type="number" 
+                  id="salaryMax" 
+                  name="salaryMax" 
+                  className="w-full px-4 py-2 border border-input rounded-md focus:ring-primary focus:border-primary bg-background text-foreground" 
+                  value={formData.salaryMax} 
+                  onChange={handleChange} 
+                  placeholder="0"
+                />
+              </div>
+              <div>
+                <label htmlFor="salaryType" className="block text-sm font-medium text-foreground mb-1">
+                  Salary Type
+                </label>
+                <select 
+                  id="salaryType" 
+                  name="salaryType" 
+                  className="w-full px-4 py-2 border border-input rounded-md focus:ring-primary focus:border-primary bg-background text-foreground" 
+                  value={formData.salaryType} 
+                  onChange={handleChange}
+                >
+                  <option value="hourly" className="bg-background text-foreground">Hourly</option>
+                  <option value="monthly" className="bg-background text-foreground">Monthly</option>
+                  <option value="stipend" className="bg-background text-foreground">Stipend</option>
+                  <option value="unpaid" className="bg-background text-foreground">Unpaid</option>
+                </select>
+              </div>
+              <div>
+                <label htmlFor="experienceLevel" className="block text-sm font-medium text-foreground mb-1">
+                  Experience Level
+                </label>
+                <select 
+                  id="experienceLevel" 
+                  name="experienceLevel" 
+                  className="w-full px-4 py-2 border border-input rounded-md focus:ring-primary focus:border-primary bg-background text-foreground" 
+                  value={formData.experienceLevel} 
+                  onChange={handleChange}
+                >
+                  <option value="entry" className="bg-background text-foreground">Entry Level</option>
+                  <option value="intermediate" className="bg-background text-foreground">Intermediate</option>
+                  <option value="advanced" className="bg-background text-foreground">Advanced</option>
+                </select>
+              </div>
+              <div className="md:col-span-2">
+                <label htmlFor="skills" className="block text-sm font-medium text-foreground mb-1">
+                  Required Skills
+                </label>
+                <input 
+                  type="text" 
+                  id="skills" 
+                  name="skills" 
+                  className="w-full px-4 py-2 border border-input rounded-md focus:ring-primary focus:border-primary bg-background text-foreground" 
+                  value={formData.skills} 
+                  onChange={handleChange} 
+                  placeholder="e.g., JavaScript, React, Python, Data Analysis"
+                />
+              </div>
             </div>
           </div>
 

@@ -60,54 +60,58 @@ const InternshipCard: React.FC<InternshipCardProps> = memo(({
   };
   
   return (
-    <div className="bg-card rounded-lg shadow-md p-6 transition-all hover:shadow-lg hover:-translate-y-0.5 border border-border relative overflow-hidden">
+    <div className="bg-card rounded-lg shadow-md p-6 transition-all hover:shadow-lg hover:-translate-y-0.5 border border-border relative overflow-hidden w-full">
       {/* Decorative element for the card */}
       <div className="absolute top-0 right-0 w-16 h-16 bg-primary/10 rounded-bl-full"></div>
       <div className="relative z-10">
-        <div className="flex items-start">
-          <div className="h-16 w-16 flex-shrink-0 mr-4">
+        <div className="flex flex-col sm:flex-row sm:items-start">
+          <div className="h-16 w-16 flex-shrink-0 mr-0 sm:mr-4 mb-4 sm:mb-0 mx-auto sm:mx-0">
             <LazyImage 
               src={internship.logoUrl} 
               alt={`${internship.company} logo`} 
               className="h-full w-full object-contain rounded-md" 
             />
           </div>
-          <div className="flex-1">
-            <h3 className="text-lg font-semibold text-foreground">
-              {internship.title}
-            </h3>
-            <div className="flex items-center text-muted-foreground mt-1">
-              <BuildingIcon size={16} className="mr-1" />
-              <span>{internship.company}</span>
+          <div className="flex-1 min-w-0">
+            <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start">
+              <div className="flex-1 min-w-0">
+                <h3 className="text-lg font-semibold text-foreground truncate">
+                  {internship.title}
+                </h3>
+                <div className="flex items-center text-muted-foreground mt-1">
+                  <BuildingIcon size={16} className="mr-1 flex-shrink-0" />
+                  <span className="truncate">{internship.company}</span>
+                </div>
+                <div className="flex items-center text-muted-foreground mt-1">
+                  <MapPinIcon size={16} className="mr-1 flex-shrink-0" />
+                  <span className="truncate">{internship.location}</span>
+                </div>
+                <div className="flex items-center text-muted-foreground mt-1">
+                  <CalendarIcon size={16} className="mr-1 flex-shrink-0" />
+                  <span className="truncate">{internship.duration}</span>
+                </div>
+              </div>
+              <div className="mt-2 sm:mt-0">
+                <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-primary/10 text-primary whitespace-nowrap">
+                  {internship.type}
+                </span>
+              </div>
             </div>
-            <div className="flex items-center text-muted-foreground mt-1">
-              <MapPinIcon size={16} className="mr-1" />
-              <span>{internship.location}</span>
+            <div className="mt-4">
+              <p className="text-muted-foreground line-clamp-3">{internship.description}</p>
             </div>
-            <div className="flex items-center text-muted-foreground mt-1">
-              <CalendarIcon size={16} className="mr-1" />
-              <span>{internship.duration}</span>
+            <div className="mt-4 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
+              <div className="text-sm text-muted-foreground">
+                Posted: {internship.postedDate}
+              </div>
+              <button 
+                onClick={handleApply} 
+                className="px-4 py-2 bg-primary text-primary-foreground text-sm font-medium rounded-md hover:bg-primary/90 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 transition-all duration-300 transform hover:-translate-y-0.5 hover:shadow-md whitespace-nowrap"
+              >
+                Apply Now
+              </button>
             </div>
           </div>
-          <div>
-            <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-primary/10 text-primary">
-              {internship.type}
-            </span>
-          </div>
-        </div>
-        <div className="mt-4">
-          <p className="text-muted-foreground line-clamp-3">{internship.description}</p>
-        </div>
-        <div className="mt-4 flex justify-between items-center">
-          <div className="text-sm text-muted-foreground">
-            Posted: {internship.postedDate}
-          </div>
-          <button 
-            onClick={handleApply} 
-            className="px-4 py-2 bg-primary text-primary-foreground text-sm font-medium rounded-md hover:bg-primary/90 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 transition-all duration-300 transform hover:-translate-y-0.5 hover:shadow-md"
-          >
-            Apply Now
-          </button>
         </div>
       </div>
     </div>

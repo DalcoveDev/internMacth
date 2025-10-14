@@ -1,7 +1,7 @@
 import { useState, useRef } from 'react';
 import { Mail, Phone, MapPin, Clock, User, MessageSquare, Send } from 'lucide-react';
-import emailjs from '@emailjs/browser';
-import { getEmailConfig } from '../utils/emailConfig';
+import { contactAPI } from '../lib/new-api-client';
+import { toast } from '@/hooks/use-toast';
 
 const Contact = () => {
   const form = useRef<HTMLFormElement>(null);
@@ -24,46 +24,46 @@ const Contact = () => {
     }));
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsSubmitting(true);
     setSubmitError('');
     
-    // Get EmailJS configuration
-    const emailConfig = getEmailConfig();
-    
-    // Check if EmailJS is properly configured
-    if (!emailConfig.isConfigured) {
-      console.error('EmailJS is not properly configured. Please check your .env file.');
+    try {
+      await contactAPI.sendMessage({
+        name: formData.name,
+        email: formData.email,
+        subject: formData.subject,
+        message: formData.message
+      });
+      
       setIsSubmitting(false);
-      setSubmitError('Email service is not configured. Please contact the site administrator.');
-      return;
-    }
-    
-    // EmailJS integration
-    if (form.current) {
-      emailjs.sendForm(emailConfig.serviceId, emailConfig.templateId, form.current, {
-        publicKey: emailConfig.publicKey,
-      })
-      .then((response) => {
-        console.log('SUCCESS!', response.status, response.text);
-        setIsSubmitting(false);
-        setSubmitSuccess(true);
-        setFormData({
-          name: '',
-          email: '',
-          subject: '',
-          message: ''
-        });
-        
-        // Reset success message after 5 seconds
-        setTimeout(() => {
-          setSubmitSuccess(false);
-        }, 5000);
-      }, (error) => {
-        console.log('FAILED...', error);
-        setIsSubmitting(false);
-        setSubmitError('Failed to send message. Please try again later.');
+      setSubmitSuccess(true);
+      setFormData({
+        name: '',
+        email: '',
+        subject: '',
+        message: ''
+      });
+      
+      toast({
+        title: "Success",
+        description: "Your message has been sent successfully. We'll get back to you within 24 hours.",
+      });
+      
+      // Reset success message after 5 seconds
+      setTimeout(() => {
+        setSubmitSuccess(false);
+      }, 5000);
+    } catch (error: any) {
+      console.error('Failed to send message:', error);
+      setIsSubmitting(false);
+      setSubmitError(error.response?.data?.error?.message || 'Failed to send message. Please try again later.');
+      
+      toast({
+        title: "Error",
+        description: error.response?.data?.error?.message || 'Failed to send message. Please try again later.',
+        variant: "destructive",
       });
     }
   };

@@ -1,7 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { ArrowLeft, Upload, FileText, User, Mail, Phone, Target } from 'lucide-react';
-import { useToast } from '../components/ToastProvider';
+import { useToast } from '@/hooks/use-toast';
+// Import the real API client
+import { applicationsAPI, internshipsAPI } from '@/lib/new-api-client';
 
 interface InternshipDetails {
   id: number;
@@ -24,10 +26,41 @@ interface ApplicationFormData {
   availability: string;
 }
 
+// Define user type for better type safety
+interface UserInfo {
+  id?: number;
+  name?: string;
+  email?: string;
+  role?: string;
+}
+
 const ApplicationForm = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const { showSuccess, showError, showInfo } = useToast();
+  const { toast } = useToast();
+  
+  // Helper functions for showing toast notifications
+  const showSuccess = (message: string, title: string = "Success") => {
+    toast({
+      title,
+      description: message,
+    });
+  };
+  
+  const showInfo = (message: string, title: string = "Information") => {
+    toast({
+      title,
+      description: message,
+    });
+  };
+  
+  const showError = (message: string, title: string = "Error") => {
+    toast({
+      title,
+      description: message,
+      variant: "destructive",
+    });
+  };
   
   const [internship, setInternship] = useState<InternshipDetails | null>(null);
   const [loading, setLoading] = useState(true);
@@ -45,57 +78,44 @@ const ApplicationForm = () => {
   const [additionalDocs, setAdditionalDocs] = useState<File[]>([]);
   const [autoSaveStatus, setAutoSaveStatus] = useState<'saved' | 'saving' | 'error' | ''>('');
 
-  // Get user info from localStorage
-  const user = JSON.parse(localStorage.getItem('user') || '{}');
-
-  // Generate mock internship data
-  const generateMockInternship = (id: string): InternshipDetails => {
-    const mockInternships: Record<string, InternshipDetails> = {
-      '1': {
-        id: 1,
-        title: 'Software Development Intern',
-        company: 'Tech Innovations Inc.',
-        location: 'San Francisco, CA',
-        type: 'Full-time',
-        duration: '3 months',
-        description: "Join our engineering team to develop cutting-edge web applications using React and Node.js. You'll work directly with senior developers on real projects.",
-        requirements: ['React', 'JavaScript', 'Node.js']
-      },
-      '2': {
-        id: 2,
-        title: 'Marketing Intern',
-        company: 'Global Media Group',
-        location: 'New York, NY',
-        type: 'Part-time',
-        duration: '6 months',
-        description: 'Assist our marketing team in developing and implementing digital marketing campaigns. Learn about SEO, content marketing, and social media strategy.',
-        requirements: ['Marketing', 'Social Media', 'Content Creation']
-      },
-      '3': {
-        id: 3,
-        title: 'Data Science Intern',
-        company: 'Analytics Pro',
-        location: 'Remote',
-        type: 'Full-time',
-        duration: '4 months',
-        description: 'Work with our data science team to analyze large datasets and build predictive models. Great opportunity to apply machine learning skills in a real-world setting.',
-        requirements: ['Python', 'Machine Learning', 'Data Analysis']
+  // Get user info from localStorage with proper null handling
+  const user: UserInfo = (() => {
+    const userString = localStorage.getItem('user');
+    if (userString) {
+      try {
+        return JSON.parse(userString);
+      } catch (e) {
+        return {};
       }
-    };
-    
-    return mockInternships[id] || {
-      id: Number(id),
-      title: 'Sample Internship Position',
-      company: 'Sample Company',
-      location: 'Remote',
-      type: 'Full-time',
-      duration: '3 months',
-      description: 'This is a sample internship position for demonstration purposes.',
-      requirements: ['Communication', 'Teamwork', 'Problem Solving']
-    };
+    }
+    return {};
+  })();
+
+  // Fetch real internship data from backend
+  const fetchInternshipData = async (id: string) => {
+    try {
+      const response = await internshipsAPI.getById(Number(id));
+      const internshipData = response.data.data.internship;
+      
+      // Transform the data to match our interface
+      return {
+        id: internshipData.id,
+        title: internshipData.title,
+        company: internshipData.company_name,
+        location: internshipData.location,
+        type: internshipData.type,
+        duration: internshipData.duration,
+        description: internshipData.description,
+        requirements: internshipData.requirements ? internshipData.requirements.split(',').map((req: string) => req.trim()) : []
+      };
+    } catch (error) {
+      console.error('Error fetching internship:', error);
+      throw error;
+    }
   };
 
   useEffect(() => {
+    // Check if user has email (is logged in)
     if (!user.email) {
       showInfo('Login Required', 'Please login to apply for internships');
       navigate('/login');
@@ -103,23 +123,32 @@ const ApplicationForm = () => {
     }
 
     if (id) {
-      // Load mock internship details
-      try {
-        const internshipData = generateMockInternship(id);
-        setInternship(internshipData);
-        setLoading(false);
-      } catch (error) {
-        showError('Error', 'Failed to load internship details');
-        setLoading(false);
-      }
+      // Load real internship details
+      const loadInternshipData = async () => {
+        try {
+          setLoading(true);
+          const internshipData = await fetchInternshipData(id);
+          setInternship(internshipData);
+        } catch (error) {
+          showError('Error', 'Failed to load internship details');
+        } finally {
+          setLoading(false);
+        }
+      };
+      
+      loadInternshipData();
 
       // Load any existing application draft from localStorage
       const savedDraft = localStorage.getItem(`application_draft_${id}`);
       if (savedDraft) {
-        setFormData(JSON.parse(savedDraft));
+        try {
+          setFormData(JSON.parse(savedDraft));
+        } catch (e) {
+          // Ignore invalid JSON
+        }
       }
     }
-  }, [id, user.email, navigate, showError, showInfo]);
+  }, [id, user.email, user, navigate]);
 
   // Auto-save form data to localStorage
   useEffect(() => {
@@ -198,22 +227,60 @@ const ApplicationForm = () => {
     setSubmitting(true);
 
     try {
-      // Simulate application submission
-      await new Promise(resolve => setTimeout(resolve, 1500));
+      // Submit application to real API
+      const applicationData = {
+        internship_id: internship.id,
+        cover_letter: formData.coverLetter,
+        skills: formData.skills,
+        experience: formData.experience,
+        education: formData.education,
+        portfolio_url: formData.portfolio,
+        resume_url: resumeFile ? resumeFile.name : '' // In a real implementation, this would be the uploaded file URL
+      };
+      
+      // Call the real API to submit the application
+      const response = await applicationsAPI.create(applicationData);
       
       // Clear the draft from localStorage
       localStorage.removeItem(`application_draft_${id}`);
       
       showSuccess('Application Submitted!', `Your application for "${internship.title}" has been submitted successfully!`);
       
-      // Navigate to student dashboard after a short delay
+      // Navigate to confirmation page with application details
       setTimeout(() => {
-        navigate('/student-dashboard');
+        navigate('/application-confirmation', {
+          state: {
+            internshipTitle: internship.title,
+            company: internship.company,
+            applicationId: response.data.data?.id
+          }
+        });
       }, 2000);
       
-    } catch (error) {
+    } catch (error: any) {
       console.error('Application submission error:', error);
-      showError('Submission Failed', 'Failed to submit your application. Please try again.');
+      let errorMessage = 'Failed to submit your application. Please try again.';
+      
+      // Handle specific error cases
+      if (error.response?.status === 400) {
+        if (error.response.data?.error?.details) {
+          // Validation errors
+          errorMessage = error.response.data.error.details.map((err: any) => err.msg).join(', ');
+        } else if (error.response.data?.error?.message) {
+          errorMessage = error.response.data.error.message;
+        }
+      } else if (error.response?.status === 401) {
+        errorMessage = 'You must be logged in to submit an application.';
+        navigate('/login');
+      } else if (error.response?.status === 404) {
+        errorMessage = 'The internship you are trying to apply for is not available. It may not be approved yet or has been removed.';
+      } else if (error.response?.status === 409) {
+        errorMessage = 'You have already applied for this internship.';
+      } else if (error.message) {
+        errorMessage = error.message;
+      }
+      
+      showError('Submission Failed', errorMessage);
     } finally {
       setSubmitting(false);
     }

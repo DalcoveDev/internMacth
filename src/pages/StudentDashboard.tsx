@@ -1,11 +1,13 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Clock, CheckCircle, XCircle, FileText, TrendingUp, BarChart3, PieChart, Calendar, Brain, Target, Award } from 'lucide-react';
+import { Clock, CheckCircle, XCircle, FileText, TrendingUp, BarChart3, PieChart, Calendar, Brain, Target, Award, InfoIcon } from 'lucide-react';
 import { ResponsiveContainer, XAxis, YAxis, CartesianGrid, Tooltip, PieChart as RechartsPieChart, Pie, Cell, BarChart, Bar, AreaChart, Area } from 'recharts';
-import { useToast } from '../components/ToastProvider';
+import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '../contexts/AuthContext';
+// Import the new API client for real backend integration
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import { applicationsAPI } from '@/lib/new-api-client';
 
 interface Application {
   id: number;
@@ -39,7 +41,7 @@ interface SkillRecommendation {
 }
 
 const StudentDashboard = () => {
-  const { showSuccess, showError, showWarning } = useToast();
+  const { toast } = useToast();
   const { user, updateUser } = useAuth();
   const [activeTab, setActiveTab] = useState('applications');
   const [loading, setLoading] = useState(true);
@@ -62,8 +64,84 @@ const StudentDashboard = () => {
     aiSkillRecommendations: [] as SkillRecommendation[] // New: AI skill recommendations
   });
 
-  // Generate mock dashboard data
+  // Helper function for showing error toast notifications
+  const showError = (message: string, title: string = "Error") => {
+    toast({
+      title,
+      description: message,
+      variant: "destructive",
+    });
+  };
+
+  // Fetch real dashboard data
   useEffect(() => {
+    const fetchDashboardData = async () => {
+      if (!user) return;
+      
+      try {
+        setLoading(true);
+        
+        // Fetch real applications data from backend
+        const applicationsResponse = await applicationsAPI.getStudentApplications({ page: 1, limit: 100 });
+        const applications = applicationsResponse.data.data?.applications || [];
+        
+        // Transform the data to match our interface
+        const transformedApplications: Application[] = applications.map((app: any) => ({
+          id: app.id,
+          internshipId: app.internship_id,
+          internshipTitle: app.title || 'Unknown Internship',
+          company: app.company_name || 'Unknown Company',
+          appliedDate: app.applied_at,
+          status: app.status,
+          logoUrl: '', // We'll need to get this from the company data
+          careerField: app.career_field || 'General'
+        }));
+        
+        // Calculate stats
+        const careerFieldCount = transformedApplications.reduce((acc, app) => {
+          acc[app.careerField] = (acc[app.careerField] || 0) + 1;
+          return acc;
+        }, {} as Record<string, number>);
+        
+        const statusCount = transformedApplications.reduce((acc, app) => {
+          acc[app.status] = (acc[app.status] || 0) + 1;
+          return acc;
+        }, {} as Record<string, number>);
+        
+        const stats = {
+          totalApplications: transformedApplications.length,
+          pendingApplications: statusCount.pending || 0,
+          approvedApplications: statusCount.approved || 0,
+          careerFields: careerFieldCount
+        };
+
+        const dashboardData: DashboardData = {
+          stats,
+          applications: transformedApplications
+        };
+
+        setDashboardData(dashboardData);
+        generateAnalyticsData(transformedApplications);
+      } catch (error: any) {
+        console.error('Failed to fetch dashboard data:', error);
+        let errorMessage = 'Failed to load dashboard data.';
+        
+        if (error.response?.status === 401) {
+          errorMessage = 'You must be logged in to view this dashboard.';
+        } else if (error.response?.status === 500) {
+          errorMessage = 'Server error. Please try again later.';
+        } else if (error.message) {
+          errorMessage = error.message;
+        }
+        
+        showError(errorMessage);
+        // Fallback to mock data
+        generateMockData();
+      } finally {
+        setLoading(false);
+      }
+    };
+
     const generateMockData = () => {
       // Mock applications data with various career fields
       const mockApplications: Application[] = [
@@ -150,8 +228,7 @@ const StudentDashboard = () => {
         bio: '',
         targetCareers: ['Technology', 'Data Science'] // Default target careers
       });
-      // Generate mock data instead of fetching from backend
-      generateMockData();
+      fetchDashboardData();
     }
   }, [user]);
 
@@ -198,85 +275,17 @@ const StudentDashboard = () => {
 
     const careerFieldDistribution = Object.entries(careerFieldCount).map(([field, count]) => ({
       name: field,
-      value: count,
-      color: getColorForCareerField(field)
+      value: count
     }));
 
-    // AI Skill Recommendations based on career interests
-    const aiSkillRecommendations: SkillRecommendation[] = [
-      {
-        skill: 'JavaScript',
-        importance: 95,
-        currentLevel: 78,
-        recommendedLevel: 90,
-        careerFields: ['Technology', 'Web Development'],
-        actionItems: [
-          'Complete advanced JavaScript course on freeCodeCamp',
-          'Build 3 personal projects using React and Node.js',
-          'Contribute to open-source JavaScript projects'
-        ]
-      },
-      {
-        skill: 'Data Analysis',
-        importance: 88,
-        currentLevel: 65,
-        recommendedLevel: 85,
-        careerFields: ['Data Science', 'Finance', 'Marketing'],
-        actionItems: [
-          'Learn Python libraries: Pandas, NumPy, and Matplotlib',
-          'Complete Kaggle data analysis challenges',
-          'Create a portfolio with 5 data analysis projects'
-        ]
-      },
-      {
-        skill: 'Digital Marketing',
-        importance: 82,
-        currentLevel: 70,
-        recommendedLevel: 85,
-        careerFields: ['Marketing', 'Business'],
-        actionItems: [
-          'Get Google Ads and Analytics certifications',
-          'Run marketing campaigns for personal projects',
-          'Create content on social media platforms'
-        ]
-      },
-      {
-        skill: 'Financial Modeling',
-        importance: 90,
-        currentLevel: 60,
-        recommendedLevel: 80,
-        careerFields: ['Finance', 'Investment Banking'],
-        actionItems: [
-          'Learn Excel advanced functions and VBA',
-          'Complete CFA Level 1 preparation',
-          'Build 3 financial models from scratch'
-        ]
-      },
-      {
-        skill: 'UI/UX Design',
-        importance: 85,
-        currentLevel: 72,
-        recommendedLevel: 85,
-        careerFields: ['Design', 'Product Management'],
-        actionItems: [
-          'Master Figma and Adobe Creative Suite',
-          'Complete UX design course on Coursera',
-          'Create a design portfolio with 5 case studies'
-        ]
-      }
+    // Skills analysis (mock data)
+    const skillsAnalysis = [
+      { skill: 'JavaScript', level: 85, improvement: '+5%' },
+      { skill: 'React', level: 78, improvement: '+12%' },
+      { skill: 'Node.js', level: 70, improvement: '+8%' },
+      { skill: 'Python', level: 65, improvement: '+15%' },
+      { skill: 'Data Analysis', level: 60, improvement: '+20%' }
     ];
-
-    // Filter recommendations based on user's target careers
-    const filteredRecommendations = aiSkillRecommendations.filter(rec => 
-      rec.careerFields.some(field => profileData.targetCareers.includes(field))
-    );
-
-    // Skills analysis (simplified for mock data)
-    const skillsAnalysis = filteredRecommendations.map(rec => ({
-      skill: rec.skill,
-      demand: rec.importance,
-      yourLevel: rec.currentLevel
-    }));
 
     setAnalyticsData({
       applicationTrend: last7Days,
@@ -284,30 +293,19 @@ const StudentDashboard = () => {
       monthlyActivity,
       skillsAnalysis,
       careerFieldDistribution,
-      aiSkillRecommendations: filteredRecommendations
+      aiSkillRecommendations: [] // Will be populated with real AI recommendations
     });
-  };
-
-  // Helper function to get consistent colors for career fields
-  const getColorForCareerField = (field: string): string => {
-    const colors: Record<string, string> = {
-      'Technology': '#3B82F6',
-      'Marketing': '#10B981',
-      'Data Science': '#8B5CF6',
-      'Finance': '#F59E0B',
-      'Design': '#EC4899',
-      'Healthcare': '#EF4444',
-      'Education': '#06B6D4',
-      'Engineering': '#6366F1'
-    };
-    return colors[field] || '#6B7280'; // Default gray
   };
 
   const handleProfileSave = () => {
     if (user) {
       // Update user in AuthContext only (no backend call)
       updateUser({ name: profileData.name });
-      showSuccess('Profile Updated', 'Your profile has been updated successfully!');
+      toast({
+        title: "Profile Updated",
+        description: "Your profile has been updated successfully!",
+        variant: "default",
+      });
     }
   };
 
@@ -315,11 +313,19 @@ const StudentDashboard = () => {
     const file = event.target.files?.[0];
     if (file) {
       if (file.size > 5 * 1024 * 1024) { // 5MB limit
-        showError('File Too Large', 'File size must be less than 5MB');
+        toast({
+          title: "File Too Large",
+          description: "File size must be less than 5MB",
+          variant: "destructive",
+        });
         return;
       }
       setUploadedFiles(prev => ({ ...prev, resume: file }));
-      showSuccess('Resume Uploaded', 'Your resume has been uploaded successfully!');
+      toast({
+        title: "Resume Uploaded",
+        description: "Your resume has been uploaded successfully!",
+        variant: "default",
+      });
     }
   };
 
@@ -328,13 +334,21 @@ const StudentDashboard = () => {
     if (files.length > 0) {
       const validFiles = files.filter(file => file.size <= 5 * 1024 * 1024);
       if (validFiles.length !== files.length) {
-        showWarning('Some Files Skipped', 'Some files were skipped due to size limit (5MB max)');
+        toast({
+          title: "Some Files Skipped",
+          description: "Some files were skipped due to size limit (5MB max)",
+          variant: "default",
+        });
       }
       setUploadedFiles(prev => ({ 
         ...prev, 
         documents: [...prev.documents, ...validFiles] 
       }));
-      showSuccess('Documents Uploaded', `${validFiles.length} document(s) uploaded successfully!`);
+      toast({
+        title: "Documents Uploaded",
+        description: `${validFiles.length} document(s) uploaded successfully!`,
+        variant: "default",
+      });
     }
   };
 
@@ -397,96 +411,106 @@ const StudentDashboard = () => {
   }
 
   return (
-    <div className="min-h-screen bg-background relative overflow-hidden transition-colors duration-300">
-      {/* Background Image */}
-      <div 
-        className="absolute inset-0 bg-cover bg-center bg-no-repeat opacity-10 transition-opacity duration-300"
-        style={{ backgroundImage: `url('/images/Download Abstract green papercut style layers background for free.jpeg')` }}
-      ></div>
-      
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 relative z-10">
-        <div className="bg-card shadow-lg rounded-xl overflow-hidden border border-border transition-all duration-300 hover:shadow-xl">
-          {/* Dashboard Header */}
-          <div className="bg-gradient-to-r from-primary to-secondary p-6 text-primary-foreground">
-            <h1 className="text-3xl font-bold">Student Dashboard</h1>
-            <p className="mt-2 text-primary-foreground/90">Welcome back, {user?.name}</p>
+    <div className="min-h-screen bg-background">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        {/* Dashboard Header */}
+        <div className="mb-8">
+          <h1 className="text-3xl font-bold text-foreground">Student Dashboard</h1>
+          <p className="text-muted-foreground mt-2">
+            Welcome back, {user?.name || 'Student'}! Track your internship applications and career progress.
+          </p>
+        </div>
+
+        {/* Info Banner */}
+        <div className="bg-blue-50 border-l-4 border-blue-500 p-4 mb-8 rounded">
+          <div className="flex">
+            <div className="flex-shrink-0">
+              <InfoIcon className="h-5 w-5 text-blue-500" />
+            </div>
+            <div className="ml-3">
+              <p className="text-sm text-blue-700">
+                <strong>Application Tracking:</strong> After submitting an application, you can track its status here. 
+                Companies typically review applications within 3-5 business days. Check back regularly for updates!
+              </p>
+            </div>
           </div>
-          
-          {/* Dashboard Tabs */}
-          <div className="border-b border-border">
-            <nav className="flex overflow-x-auto">
-              <button onClick={() => setActiveTab('applications')} className={`py-4 px-6 text-center border-b-2 font-medium text-sm transition-colors whitespace-nowrap ${activeTab === 'applications' ? 'border-primary text-primary' : 'border-transparent text-muted-foreground hover:text-foreground hover:border-border'}`}>
-                My Applications
-              </button>
-              <button onClick={() => setActiveTab('profile')} className={`py-4 px-6 text-center border-b-2 font-medium text-sm transition-colors whitespace-nowrap ${activeTab === 'profile' ? 'border-primary text-primary' : 'border-transparent text-muted-foreground hover:text-foreground hover:border-border'}`}>
-                Profile
-              </button>
-              <button onClick={() => setActiveTab('resume')} className={`py-4 px-6 text-center border-b-2 font-medium text-sm transition-colors whitespace-nowrap ${activeTab === 'resume' ? 'border-primary text-primary' : 'border-transparent text-muted-foreground hover:text-foreground hover:border-border'}`}>
-                Resume
-              </button>
-              <button onClick={() => setActiveTab('analytics')} className={`py-4 px-6 text-center border-b-2 font-medium text-sm transition-colors whitespace-nowrap ${activeTab === 'analytics' ? 'border-primary text-primary' : 'border-transparent text-muted-foreground hover:text-foreground hover:border-border'}`}>
-                Analytics
-              </button>
-            </nav>
-          </div>
-          {/* Dashboard Content */}
-          <div className="p-6 transition-all duration-300">
-            {activeTab === 'applications' && <div>
-                <div className="flex justify-between items-center mb-6">
-                  <h2 className="text-xl font-semibold text-foreground transition-colors duration-300">
-                    Your Applications
-                  </h2>
-                  <Link to="/search">
-                    <Button variant="default" className="transition-all duration-300 hover:shadow-md">
-                      Browse More Internships
-                    </Button>
-                  </Link>
-                </div>
-                {dashboardData?.applications.length ? <div className="space-y-4">
-                    {dashboardData.applications.map(application => <Card key={application.id} className="border-border transition-all duration-300 hover:border-primary/50 hover:shadow-md">
-                        <CardContent className="p-4">
-                          <div className="flex items-start">
-                            <div className="h-12 w-12 flex-shrink-0 mr-4 transition-all duration-300">
-                              <img src={application.logoUrl} alt={`${application.company} logo`} className="h-full w-full object-contain rounded-md" />
+        </div>
+
+        {/* Dashboard Tabs */}
+        <div className="border-b border-border">
+          <nav className="flex overflow-x-auto">
+            <button onClick={() => setActiveTab('applications')} className={`py-4 px-6 text-center border-b-2 font-medium text-sm transition-colors whitespace-nowrap ${activeTab === 'applications' ? 'border-primary text-primary' : 'border-transparent text-muted-foreground hover:text-foreground hover:border-border'}`}>
+              My Applications
+            </button>
+            <button onClick={() => setActiveTab('profile')} className={`py-4 px-6 text-center border-b-2 font-medium text-sm transition-colors whitespace-nowrap ${activeTab === 'profile' ? 'border-primary text-primary' : 'border-transparent text-muted-foreground hover:text-foreground hover:border-border'}`}>
+              Profile
+            </button>
+            <button onClick={() => setActiveTab('resume')} className={`py-4 px-6 text-center border-b-2 font-medium text-sm transition-colors whitespace-nowrap ${activeTab === 'resume' ? 'border-primary text-primary' : 'border-transparent text-muted-foreground hover:text-foreground hover:border-border'}`}>
+              Resume
+            </button>
+            <button onClick={() => setActiveTab('analytics')} className={`py-4 px-6 text-center border-b-2 font-medium text-sm transition-colors whitespace-nowrap ${activeTab === 'analytics' ? 'border-primary text-primary' : 'border-transparent text-muted-foreground hover:text-foreground hover:border-border'}`}>
+              Analytics
+            </button>
+          </nav>
+        </div>
+        {/* Dashboard Content */}
+        <div className="p-6 transition-all duration-300">
+          {activeTab === 'applications' && <div>
+              <div className="flex justify-between items-center mb-6">
+                <h2 className="text-xl font-semibold text-foreground transition-colors duration-300">
+                  Your Applications
+                </h2>
+                <Link to="/search">
+                  <Button variant="default" className="transition-all duration-300 hover:shadow-md">
+                    Browse More Internships
+                  </Button>
+                </Link>
+              </div>
+              {dashboardData?.applications.length ? <div className="space-y-4">
+                  {dashboardData.applications.map(application => <Card key={application.id} className="border-border transition-all duration-300 hover:border-primary/50 hover:shadow-md">
+                      <CardContent className="p-4">
+                        <div className="flex items-start">
+                          <div className="h-12 w-12 flex-shrink-0 mr-4 transition-all duration-300">
+                            <img src={application.logoUrl} alt={`${application.company} logo`} className="h-full w-full object-contain rounded-md" />
+                          </div>
+                          <div className="flex-1">
+                            <div className="flex justify-between">
+                              <h3 className="text-lg font-semibold text-foreground transition-colors duration-300">
+                                {application.internshipTitle}
+                              </h3>
+                              {getStatusBadge(application.status)}
                             </div>
-                            <div className="flex-1">
-                              <div className="flex justify-between">
-                                <h3 className="text-lg font-semibold text-foreground transition-colors duration-300">
-                                  {application.internshipTitle}
-                                </h3>
-                                {getStatusBadge(application.status)}
-                              </div>
-                              <p className="text-muted-foreground transition-colors duration-300">{application.company}</p>
-                              <div className="flex items-center mt-1">
-                                <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border border-primary/20 bg-primary/5 text-primary">
-                                  {application.careerField}
-                                </span>
-                                <span className="text-sm text-muted-foreground">
-                                  Applied on{' '}
-                                  {new Date(application.appliedDate).toLocaleDateString()}
-                                </span>
-                              </div>
-                              <div className="mt-4 flex">
-                                <Link to={`/application/${application.id}`} className="text-primary hover:text-primary/80 text-sm font-medium flex items-center transition-colors duration-300">
-                                  <FileText size={16} className="mr-1" />
-                                  View Details
-                                </Link>
-                              </div>
+                            <p className="text-muted-foreground transition-colors duration-300">{application.company}</p>
+                            <div className="flex items-center mt-1">
+                              <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border border-primary/20 bg-primary/5 text-primary">
+                                {application.careerField}
+                              </span>
+                              <span className="text-sm text-muted-foreground">
+                                Applied on{' '}
+                                {new Date(application.appliedDate).toLocaleDateString()}
+                              </span>
+                            </div>
+                            <div className="mt-4 flex">
+                              <Link to={`/application/${application.id}`} className="text-primary hover:text-primary/80 text-sm font-medium flex items-center transition-colors duration-300">
+                                <FileText size={16} className="mr-1" />
+                                View Details
+                              </Link>
                             </div>
                           </div>
-                        </CardContent>
-                      </Card>)}
-                  </div> : <div className="text-center py-12">
-                    <p className="text-muted-foreground mb-4 transition-colors duration-300">
-                      You haven't applied to any internships yet.
-                    </p>
-                    <Link to="/search">
-                      <Button variant="default" className="transition-all duration-300 hover:shadow-md">
-                        Browse Internships
-                      </Button>
-                    </Link>
-                  </div>}
-              </div>}
+                        </div>
+                      </CardContent>
+                    </Card>)}
+                </div> : <div className="text-center py-12">
+                  <p className="text-muted-foreground mb-4 transition-colors duration-300">
+                    You haven't applied to any internships yet.
+                  </p>
+                  <Link to="/search">
+                    <Button variant="default" className="transition-all duration-300 hover:shadow-md">
+                      Browse Internships
+                    </Button>
+                  </Link>
+                </div>}
+            </div>}
             
             {activeTab === 'analytics' && (
               <div>
@@ -1055,11 +1079,11 @@ const StudentDashboard = () => {
                     </div>
                   </div>
                 </div>
-              </div>}
+              </div>
+            }
           </div>
         </div>
       </div>
-    </div>
   );
 };
 

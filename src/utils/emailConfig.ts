@@ -1,8 +1,9 @@
 // Email configuration utility
 export const getEmailConfig = () => {
-  const serviceId = import.meta.env.VITE_EMAILJS_SERVICE_ID;
-  const templateId = import.meta.env.VITE_EMAILJS_TEMPLATE_ID;
-  const publicKey = import.meta.env.VITE_EMAILJS_PUBLIC_KEY;
+  // Safely access environment variables
+  const serviceId = typeof import.meta !== 'undefined' && import.meta.env ? import.meta.env.VITE_EMAILJS_SERVICE_ID : undefined;
+  const templateId = typeof import.meta !== 'undefined' && import.meta.env ? import.meta.env.VITE_EMAILJS_TEMPLATE_ID : undefined;
+  const publicKey = typeof import.meta !== 'undefined' && import.meta.env ? import.meta.env.VITE_EMAILJS_PUBLIC_KEY : undefined;
   
   return {
     serviceId,

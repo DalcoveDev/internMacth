@@ -1,15 +1,41 @@
 import { Link } from 'react-router-dom';
 import { Search, Briefcase } from 'lucide-react';
 import { useState, useEffect } from 'react';
+import { homeAPI } from '../lib/new-api-client';
+import { toast } from '@/hooks/use-toast';
 
 const Hero = () => {
   const [imageLoaded, setImageLoaded] = useState(false);
+  const [stats, setStats] = useState({
+    companies: 1000,
+    jobs: 10000,
+    placements: 5000
+  });
   
   // Preload image to improve perceived performance
   useEffect(() => {
     const img = new Image();
     img.src = "/images/career.jpeg";
     img.onload = () => setImageLoaded(true);
+  }, []);
+  
+  // Fetch stats from backend
+  useEffect(() => {
+    const fetchStats = async () => {
+      try {
+        const response = await homeAPI.getContent();
+        setStats(response.data.data.stats);
+      } catch (error: any) {
+        console.error('Failed to fetch home stats:', error);
+        toast({
+          title: "Error",
+          description: "Failed to load statistics. Using default values.",
+          variant: "destructive",
+        });
+      }
+    };
+
+    fetchStats();
   }, []);
 
   return (
@@ -90,12 +116,12 @@ const Hero = () => {
               
               {/* Floating Stats Cards */}
               <div className="absolute -top-3 -right-3 bg-card/95 backdrop-blur-sm px-3 py-2 rounded-lg shadow-md border border-border">
-                <div className="text-lg font-bold text-primary">1000+</div>
+                <div className="text-lg font-bold text-primary">{stats.companies}+</div>
                 <div className="text-xs text-muted-foreground">Companies</div>
               </div>
               
               <div className="absolute -bottom-3 -left-3 bg-card/95 backdrop-blur-sm px-3 py-2 rounded-lg shadow-md border border-border">
-                <div className="text-lg font-bold text-primary">10K+</div>
+                <div className="text-lg font-bold text-primary">{stats.jobs}+</div>
                 <div className="text-xs text-muted-foreground">Jobs</div>
               </div>
             </div>
